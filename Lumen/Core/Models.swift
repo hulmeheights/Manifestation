@@ -451,6 +451,22 @@ struct Profile: Codable, Hashable {
     var calmMotion: Bool = false
     var startedAt: Date = Date()
 
+    // MARK: Moonlight
+
+    /// Day, night, or following your own three windows.
+    var appearance: Appearance = .auto
+
+    // MARK: The Picture
+    //
+    // Visualisation is never forced and never on a countdown. The user moves
+    // when they're ready; a clock counts up so slowness is rewarded rather
+    // than punished.
+
+    /// Play the affirmation back in the user's own recorded voice at the end.
+    var playOwnVoice: Bool = true
+    /// Show the elapsed clock during a session.
+    var showVisualisationClock: Bool = true
+
     init() {}
 
     init(from decoder: Decoder) throws {
@@ -465,6 +481,14 @@ struct Profile: Codable, Hashable {
         tapToComplete        = c.get(.tapToComplete, false)
         calmMotion           = c.get(.calmMotion, false)
         startedAt            = c.get(.startedAt, Date())
+        appearance           = c.get(.appearance, Appearance.auto)
+        playOwnVoice         = c.get(.playOwnVoice, true)
+        showVisualisationClock = c.get(.showVisualisationClock, true)
+    }
+
+    /// The skin to draw with right now, honouring the user's own hours.
+    var skin: Skin {
+        Skin.of(appearance, nightHour: nightHour, morningHour: morningHour)
     }
 
     func hour(for window: RitualWindow) -> Int {
