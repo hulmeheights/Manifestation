@@ -11,7 +11,7 @@ struct RootView: View {
     var body: some View {
         Group {
             if store.profile.hasOnboarded {
-                MainTabs()
+                MoonwritRoot()
             } else {
                 OnboardingView()
                     .transition(.opacity)

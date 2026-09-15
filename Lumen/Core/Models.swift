@@ -467,6 +467,10 @@ struct Profile: Codable, Hashable {
     /// Show the elapsed clock during a session.
     var showVisualisationClock: Bool = true
 
+    /// Everything unlocked, no subscription. Set on your own devices so you
+    /// never pay for your own app.
+    var ownerUnlocked: Bool = false
+
     init() {}
 
     init(from decoder: Decoder) throws {
@@ -484,6 +488,7 @@ struct Profile: Codable, Hashable {
         appearance           = c.get(.appearance, Appearance.auto)
         playOwnVoice         = c.get(.playOwnVoice, true)
         showVisualisationClock = c.get(.showVisualisationClock, true)
+        ownerUnlocked        = c.get(.ownerUnlocked, false)
     }
 
     /// The skin to draw with right now, honouring the user's own hours.
