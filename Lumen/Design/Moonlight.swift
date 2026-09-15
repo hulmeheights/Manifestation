@@ -293,7 +293,7 @@ private struct Seeded: RandomNumberGenerator {
     }
 }
 
-struct Starfield: View {
+struct NightStars: View {
     var count: Int = 90
     var seed: UInt64 = 20_260_915
 
@@ -345,7 +345,7 @@ struct NightGround: View {
     var body: some View {
         ZStack {
             skin.ground
-            Starfield()
+            NightStars()
         }
         .ignoresSafeArea()
     }

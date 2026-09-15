@@ -145,7 +145,7 @@ struct HomeWidgetView: View {
         .containerBackground(for: .widget) {
             ZStack {
                 skin.ground
-                if skin.stars { Starfield(count: 40) }
+                if skin.stars { NightStars(count: 40) }
             }
         }
     }
