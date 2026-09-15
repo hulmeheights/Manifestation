@@ -100,6 +100,29 @@ enum Library {
         "Somebody asks how you did it. What do you tell them?"
     ]
 
+    // MARK: - The Picture
+    //
+    // Visualisation. Eight sensory prompts, answered in your head, in order.
+    // Never on a timer — you move when you're ready.
+
+    static let picturePrompts: [String] = [
+        "Where are you standing?",
+        "What is the light like?",
+        "What can you hear from where you are?",
+        "What are you wearing?",
+        "Who else is there?",
+        "What did you just put down?",
+        "What can you smell?",
+        "What is the first thing you say out loud?"
+    ]
+
+    /// Shown once the eight are done.
+    static let pictureClose = "Hold it for a moment longer, then let it go."
+
+    static let pictureAsk = "What did you see?"
+
+    static let pictureIntro = "Eight questions. Answer them in your head, in as much detail as you can stand. There is no timer — take as long as you like on each one."
+
     // MARK: - Starter affirmations, by area
 
     static func starters(for area: LifeArea) -> [String] {

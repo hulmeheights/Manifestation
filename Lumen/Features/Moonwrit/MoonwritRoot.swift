@@ -9,13 +9,14 @@
 import SwiftUI
 
 enum MoonwritTab: String, CaseIterable, Identifiable {
-    case today, cycle, evidence, you
+    case today, see, cycle, evidence, you
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .today:    return "Today"
+        case .today:    return "Write"
+        case .see:      return "See"
         case .cycle:    return "Cycle"
         case .evidence: return "Proof"
         case .you:      return "You"
@@ -25,6 +26,7 @@ enum MoonwritTab: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .today:    return "pencil.line"
+        case .see:      return "eye"
         case .cycle:    return "moon.stars"
         case .evidence: return "sparkles"
         case .you:      return "person"
@@ -50,6 +52,7 @@ struct MoonwritRoot: View {
                 Group {
                     switch tab {
                     case .today:    TodayScreen(launch: $ritual)
+                    case .see:      PictureScreen()
                     case .cycle:    CycleScreen()
                     case .evidence: ProofScreen()
                     case .you:      YouScreen()
@@ -145,7 +148,7 @@ struct TodayScreen: View {
         }
         .scrollIndicators(.hidden)
         .sheet(isPresented: $writingLine) {
-            IntentionEditorView(existing: nil)
+            LineEditor(existing: nil)
         }
     }
 

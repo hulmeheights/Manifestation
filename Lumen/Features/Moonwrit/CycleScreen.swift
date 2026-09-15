@@ -215,7 +215,7 @@ struct ProofScreen: View {
         }
         .scrollIndicators(.hidden)
         .sheet(isPresented: $composing) {
-            EvidenceComposer()
+            ProofComposer()
         }
     }
 }
