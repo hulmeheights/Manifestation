@@ -119,8 +119,9 @@ struct BecomeScreen: View {
             )
             .padding(.bottom, 4)
 
-            ForEach(Array(sheet.todaysActs().enumerated()), id: \.offset) { _, pair in
-                ActRow(trait: pair.trait, act: pair.act)
+            let pairs = sheet.todaysActs()
+            ForEach(pairs.indices, id: \.self) { index in
+                ActRow(trait: pairs[index].trait, act: pairs[index].act)
             }
 
             Text("Tick it after you've done it, not before. A vote you didn't earn is the only way to break this.")

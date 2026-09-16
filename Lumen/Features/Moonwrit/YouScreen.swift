@@ -26,11 +26,12 @@ struct YouScreen: View {
     @State private var live = false
     @State private var liveRefused = false
 
-    var body: some View {
-        @Bindable var bound = store
+    // MARK: - Body
+    //
+    // Split into blocks because a SwiftUI VStack takes at most ten children.
 
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
+    @ViewBuilder
+    private var headBlock: some View {
                 Text("You")
                     .font(Ink.hero)
                     .foregroundStyle(skin.ink)
@@ -68,6 +69,11 @@ struct YouScreen: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 22)
+    }
+
+    @ViewBuilder
+    private var appearanceBlock: some View {
+        @Bindable var bound = store
 
                 // MARK: Appearance
 
@@ -109,6 +115,10 @@ struct YouScreen: View {
                     .foregroundStyle(skin.dim)
                     .padding(.top, 10)
                     .fixedSize(horizontal: false, vertical: true)
+    }
+
+    @ViewBuilder
+    private var alertsBlock: some View {
 
                 // MARK: Notifications
 
@@ -162,6 +172,11 @@ struct YouScreen: View {
                         .strokeBorder(skin.hairline, lineWidth: 1)
                 )
                 .padding(.top, 10)
+    }
+
+    @ViewBuilder
+    private var windowsBlock: some View {
+        @Bindable var bound = store
 
                 // MARK: Windows
 
@@ -200,6 +215,10 @@ struct YouScreen: View {
                               isOn: $bound.profile.showVisualisationClock)
                 }
                 .padding(.top, 6)
+    }
+
+    @ViewBuilder
+    private var footerBlock: some View {
 
                 // MARK: About
 
@@ -209,6 +228,16 @@ struct YouScreen: View {
                 Button("Erase everything") { confirmingErase = true }
                     .buttonStyle(.outline)
                     .padding(.top, 26)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                headBlock
+                appearanceBlock
+                alertsBlock
+                windowsBlock
+                footerBlock
             }
             .padding(.horizontal, Space.gutter)
             .padding(.bottom, 26)
@@ -263,7 +292,6 @@ struct YouScreen: View {
         notifyStatus == .authorized || notifyStatus == .provisional || notifyStatus == .ephemeral
     }
 
-    @ViewBuilder
     // MARK: - The lock screen card
 
     private var liveLabel: String {
@@ -342,6 +370,7 @@ struct YouScreen: View {
 
     // MARK: - Notifications
 
+    @ViewBuilder
     private var notificationsBlock: some View {
         @Bindable var bound = store
 
