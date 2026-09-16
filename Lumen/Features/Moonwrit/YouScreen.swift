@@ -116,6 +116,37 @@ struct YouScreen: View {
                 notificationsBlock
                     .padding(.top, 10)
 
+                // MARK: Widgets
+
+                Eyebrow(text: "Widgets")
+                    .padding(.top, Space.section)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Not switched on yet")
+                        .font(Ink.body(15, weight: .semibold))
+                        .foregroundStyle(skin.ink)
+
+                    Text("Home screen and lock screen widgets are written and ready, but a widget is a second app inside the app, and that has to be added once in Xcode — it can't be done from code. It takes about five minutes. WIDGETS.md in the project folder has every click.")
+                        .font(Ink.small)
+                        .foregroundStyle(skin.dim)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("Once it's on: long-press the home screen, tap +, search Moonwrit. For the lock screen, long-press the lock screen, tap Customise, then the area under the clock. Both stay there permanently \u{2014} no \u{201C}go live\u{201D}, no expiry.")
+                        .font(Ink.small)
+                        .foregroundStyle(skin.dim)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: Space.radius, style: .continuous).fill(skin.card)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Space.radius, style: .continuous)
+                        .strokeBorder(skin.hairline, lineWidth: 1)
+                )
+                .padding(.top, 10)
+
                 // MARK: Windows
 
                 Eyebrow(text: "The three windows")
@@ -263,25 +294,25 @@ struct YouScreen: View {
                           detail: "New moons, full moons, supermoons and eclipses — with what each one is for.",
                           isOn: $bound.profile.moonNightAlerts)
 
-                HStack(spacing: 14) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Send one now")
-                            .font(Ink.body(15, weight: .semibold))
-                            .foregroundStyle(skin.ink)
-                        Text(queued > 0
-                             ? "\(queued) queued with iOS. The test arrives in five seconds — lock the phone to see it properly."
-                             : "Nothing queued yet. The test arrives in five seconds.")
-                            .font(Ink.small)
-                            .foregroundStyle(skin.dim)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer(minLength: 0)
-                    Button("Test") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Try one")
+                        .font(Ink.body(15, weight: .semibold))
+                        .foregroundStyle(skin.ink)
+
+                    Text(queued > 0
+                         ? "\(queued) reminders are queued with iOS. Tap below and one arrives in five seconds so you can see exactly what it looks like — lock the phone straight after to see it properly on the lock screen."
+                         : "Nothing is queued yet — turn the switch above on. Tap below and a sample arrives in five seconds.")
+                        .font(Ink.small)
+                        .foregroundStyle(skin.dim)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Button("Send me one in 5 seconds") {
                         Whispers.sendTest(line: store.focusIntention?.affirmation ?? "")
+                        Haptics.tick(store.profile.hapticsEnabled)
                     }
-                    .buttonStyle(OutlineButtonStyle(wide: false))
+                    .buttonStyle(.outline)
                 }
-                .padding(.vertical, 13)
+                .padding(.vertical, 14)
             }
             .onChange(of: store.profile.notificationsEnabled) { _, _ in reschedule() }
             .onChange(of: store.profile.moonNightAlerts) { _, _ in reschedule() }
