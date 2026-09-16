@@ -101,6 +101,24 @@ extension ManifestStore {
         )
     }
 
+    /// Everything outside the app that mirrors what's inside it: the widgets,
+    /// the fourteen days of queued reminders, and the lock screen card.
+    ///
+    /// One call, used everywhere the practice changes, so it is impossible to
+    /// update one of the three and forget the others. Changing your line now
+    /// changes what the notifications say, which it didn't before.
+    func syncOutside() {
+        publishSnapshot()
+        Whispers.reschedule(
+            profile: profile,
+            line: focusIntention?.affirmation ?? ""
+        )
+        Whispers.scheduleMoonNights(
+            enabled: profile.notificationsEnabled && profile.moonNightAlerts
+        )
+        refreshLive()
+    }
+
     // MARK: - The lock screen card
 
     /// The moving half of the Live Activity, built from where the practice

@@ -8,6 +8,7 @@
 import SwiftUI
 import UIKit
 import UserNotifications
+import UniformTypeIdentifiers
 
 struct YouScreen: View {
 
@@ -25,6 +26,11 @@ struct YouScreen: View {
     @State private var unlockFailed = false
     @State private var live = false
     @State private var liveRefused = false
+    @State private var sending = false
+    @State private var testMessage = ""
+    @State private var exportItem: ShareItem?
+    @State private var importing = false
+    @State private var backupMessage = ""
 
     // MARK: - Body
     //
@@ -115,6 +121,12 @@ struct YouScreen: View {
                     .foregroundStyle(skin.dim)
                     .padding(.top, 10)
                     .fixedSize(horizontal: false, vertical: true)
+
+                Text("Notifications always use the first icon, never this one — that's iOS, not a setting. If a notification still shows an older icon, the build on the phone is behind: run it again from Xcode and it catches up. Deleting the app clears it too, but that erases your practice with it, so rebuild first.")
+                    .font(Ink.tiny)
+                    .foregroundStyle(skin.ghost)
+                    .padding(.top, 8)
+                    .fixedSize(horizontal: false, vertical: true)
     }
 
     @ViewBuilder
@@ -204,12 +216,9 @@ struct YouScreen: View {
                     toggleRow("Haptics",
                               detail: "A tap in the hand for every line finished.",
                               isOn: $bound.profile.hapticsEnabled)
-                    toggleRow("Calm motion",
-                              detail: "Stills the moon's glow and everything else.",
+                    toggleRow("Still the sky",
+                              detail: "Turns off the glow behind the moon and the stars behind everything.",
                               isOn: $bound.profile.calmMotion)
-                    toggleRow("Your own voice",
-                              detail: "Play your line back in your voice at the end of a visualisation.",
-                              isOn: $bound.profile.playOwnVoice)
                     toggleRow("Count up while visualising",
                               detail: "A clock, not a timer. It never rushes you on.",
                               isOn: $bound.profile.showVisualisationClock)
@@ -219,6 +228,14 @@ struct YouScreen: View {
 
     @ViewBuilder
     private var footerBlock: some View {
+
+                // MARK: Backup
+
+                Eyebrow(text: "Your copy")
+                    .padding(.top, Space.section)
+
+                backupBlock
+                    .padding(.top, 10)
 
                 // MARK: About
 
@@ -248,6 +265,23 @@ struct YouScreen: View {
             if phase == .active { Task { await refresh() } }
         }
         .sheet(isPresented: $showingGuide) { GuideScreen() }
+        .sheet(item: $exportItem) { item in
+            ShareSheet(items: [item.url])
+        }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
+            switch result {
+            case .success(let url):
+                if let restored = Backup.load(from: url) {
+                    store.restore(restored)
+                    store.syncOutside()
+                    backupMessage = "Restored."
+                } else {
+                    backupMessage = "That file isn't a Moonwrit backup."
+                }
+            case .failure:
+                backupMessage = "Couldn't open that file."
+            }
+        }
         .alert("Owner unlock", isPresented: $showingUnlock) {
             TextField("Passphrase", text: $unlockAttempt)
                 .textInputAutocapitalization(.never)
@@ -270,12 +304,61 @@ struct YouScreen: View {
         .alert("Erase everything?", isPresented: $confirmingErase) {
             Button("Erase", role: .destructive) {
                 store.eraseEverything()
-                store.publishSnapshot()
             }
             Button("Keep it", role: .cancel) {}
         } message: {
             Text("Every line, every rep and every piece of evidence. This can't be undone.")
         }
+    }
+
+    // MARK: - Backup
+
+    private var backupBlock: some View {
+        VStack(alignment: .leading, spacing: 12) {
+
+            Text("Everything you've written lives in one file on this phone and nowhere else. That's the point — but it also means deleting the app takes it with it, and there's no server to get it back from.")
+                .font(Ink.small)
+                .foregroundStyle(skin.dim)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button("Save a copy") {
+                if let url = Backup.export(store.state) {
+                    exportItem = ShareItem(url: url)
+                    backupMessage = ""
+                } else {
+                    backupMessage = "Couldn't write the file."
+                }
+            }
+            .buttonStyle(.outline)
+            .frame(maxWidth: .infinity)
+
+            Button("Restore from a copy") { importing = true }
+                .buttonStyle(.plain)
+                .font(Ink.small)
+                .foregroundStyle(skin.dim)
+                .frame(maxWidth: .infinity)
+
+            if !backupMessage.isEmpty {
+                Text(backupMessage)
+                    .font(Ink.small)
+                    .foregroundStyle(skin.evidence)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Text("Put it in iCloud Drive, or email it to yourself. Restoring replaces everything currently in the app.")
+                .font(Ink.tiny)
+                .foregroundStyle(skin.ghost)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: Space.radius, style: .continuous).fill(skin.card)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Space.radius, style: .continuous)
+                .strokeBorder(skin.hairline, lineWidth: 1)
+        )
     }
 
     // MARK: - Notifications
@@ -286,10 +369,6 @@ struct YouScreen: View {
         case .denied:                                return "Blocked in iOS"
         default:                                     return "Not asked yet"
         }
-    }
-
-    private var allowed: Bool {
-        notifyStatus == .authorized || notifyStatus == .provisional || notifyStatus == .ephemeral
     }
 
     // MARK: - The lock screen card
@@ -374,87 +453,122 @@ struct YouScreen: View {
     private var notificationsBlock: some View {
         @Bindable var bound = store
 
-        if notifyStatus == .denied {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("iOS is blocking them. Nothing the app can do from here — it has to be turned back on in iOS Settings.")
-                    .font(Ink.small)
-                    .foregroundStyle(skin.dim)
-                    .fixedSize(horizontal: false, vertical: true)
+        VStack(spacing: 0) {
 
-                Button("Open iOS Settings") {
-                    if let url = URL(string: UIApplication.openSettingsURLString) {
-                        UIApplication.shared.open(url)
-                    }
-                }
-                .buttonStyle(.outline)
-            }
-        } else if !allowed {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Three a day at your hours, carrying your own line back to you — never generic filler. Everything is scheduled on this phone; nothing leaves it.")
-                    .font(Ink.small)
-                    .foregroundStyle(skin.dim)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Button("Turn notifications on") {
-                    Task {
-                        let granted = await Whispers.requestAuthorisation()
-                        if granted {
-                            store.profile.notificationsEnabled = true
-                            reschedule()
-                        }
-                        await refresh()
-                    }
-                }
-                .buttonStyle(.ink)
-            }
-        } else {
-            VStack(spacing: 0) {
-                toggleRow("Your line, three times a day",
-                          detail: "At \(hour(store.profile.morningHour)), \(hour(store.profile.afternoonHour)) and \(hour(store.profile.nightHour)).",
-                          isOn: $bound.profile.notificationsEnabled)
-
-                toggleRow("Moon nights",
-                          detail: "New moons, full moons, supermoons and eclipses — with what each one is for.",
-                          isOn: $bound.profile.moonNightAlerts)
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Try one")
-                        .font(Ink.body(15, weight: .semibold))
-                        .foregroundStyle(skin.ink)
-
-                    Text(queued > 0
-                         ? "\(queued) reminders are queued with iOS. Tap below and one arrives in five seconds so you can see exactly what it looks like — lock the phone straight after to see it properly on the lock screen."
-                         : "Nothing is queued yet — turn the switch above on. Tap below and a sample arrives in five seconds.")
+            if notifyStatus == .denied {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("iOS is blocking them. Nothing the app can do from here — it has to be switched back on in iOS Settings, under Moonwrit → Notifications.")
                         .font(Ink.small)
                         .foregroundStyle(skin.dim)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Button("Send me one in 5 seconds") {
-                        Whispers.sendTest(line: store.focusIntention?.affirmation ?? "")
-                        Haptics.tick(store.profile.hapticsEnabled)
+                    Button("Open iOS Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
                     }
                     .buttonStyle(.outline)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 16)
             }
-            .onChange(of: store.profile.notificationsEnabled) { _, _ in reschedule() }
-            .onChange(of: store.profile.moonNightAlerts) { _, _ in reschedule() }
-            .onChange(of: store.profile.morningHour) { _, _ in reschedule() }
-            .onChange(of: store.profile.afternoonHour) { _, _ in reschedule() }
-            .onChange(of: store.profile.nightHour) { _, _ in reschedule() }
+
+            // The switches are always here. Turning one on asks iOS for
+            // permission if it hasn't been asked yet — you shouldn't have to
+            // find a separate button first.
+            toggleRow("Your line, three times a day",
+                      detail: "At \(hour(store.profile.morningHour)), \(hour(store.profile.afternoonHour)) and \(hour(store.profile.nightHour)). Your own words, never filler.",
+                      isOn: $bound.profile.notificationsEnabled)
+
+            toggleRow("Moon nights",
+                      detail: "New moons, full moons, supermoons and eclipses — with what each one is for.",
+                      isOn: $bound.profile.moonNightAlerts)
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("See what one looks like")
+                    .font(Ink.body(15, weight: .semibold))
+                    .foregroundStyle(skin.ink)
+
+                Text("It arrives in five seconds and shows even if you're still in the app. Every notification carries a drawn card — the moon as it is tonight, with your line on it.")
+                    .font(Ink.small)
+                    .foregroundStyle(skin.dim)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button(sending ? "On its way…" : "Send me one in 5 seconds") {
+                    sending = true
+                    testMessage = ""
+                    Task {
+                        let result = await Whispers.sendTest(
+                            line: store.focusIntention?.affirmation ?? ""
+                        )
+                        sending = false
+                        switch result {
+                        case .sent:
+                            testMessage = "On its way. Lock the phone now and you'll see it on the lock screen."
+                            Haptics.tick(store.profile.hapticsEnabled)
+                        case .needsPermission:
+                            testMessage = "You said no to notifications. Switch them on in iOS Settings → Moonwrit."
+                        case .blockedInSettings:
+                            testMessage = "iOS is blocking notifications for Moonwrit. Settings → Moonwrit → Notifications."
+                        case .failed(let why):
+                            testMessage = "iOS refused: \(why)"
+                        }
+                        await refresh()
+                    }
+                }
+                .buttonStyle(.outline)
+                .frame(maxWidth: .infinity)
+                .disabled(sending)
+
+                if !testMessage.isEmpty {
+                    Text(testMessage)
+                        .font(Ink.small)
+                        .foregroundStyle(skin.evidence)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Text(queued > 0
+                     ? "\(queued) queued with iOS."
+                     : "Nothing queued yet — turn a switch on above.")
+                    .font(Ink.tiny)
+                    .foregroundStyle(skin.ghost)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 16)
+        }
+        .onChange(of: store.profile.notificationsEnabled) { _, on in
+            if on { askThenReschedule() } else { reschedule() }
+        }
+        .onChange(of: store.profile.moonNightAlerts) { _, on in
+            if on { askThenReschedule() } else { reschedule() }
+        }
+        .onChange(of: store.profile.morningHour) { _, _ in reschedule() }
+        .onChange(of: store.profile.afternoonHour) { _, _ in reschedule() }
+        .onChange(of: store.profile.nightHour) { _, _ in reschedule() }
+    }
+
+    /// Flipping a switch on is the ask. If iOS says no, the switch goes back
+    /// rather than sitting there on and doing nothing.
+    private func askThenReschedule() {
+        Task {
+            let status = await Whispers.authorisationStatus()
+            if status == .notDetermined {
+                let granted = await Whispers.requestAuthorisation()
+                if !granted {
+                    store.profile.notificationsEnabled = false
+                    store.profile.moonNightAlerts = false
+                }
+            }
+            reschedule()
+            await refresh()
         }
     }
 
     private func hour(_ value: Int) -> String { String(format: "%02d:00", value) }
 
     private func reschedule() {
-        Whispers.reschedule(
-            profile: store.profile,
-            line: store.focusIntention?.affirmation ?? ""
-        )
-        Whispers.scheduleMoonNights(
-            enabled: store.profile.notificationsEnabled && store.profile.moonNightAlerts
-        )
+        store.syncOutside()
         Task {
             try? await Task.sleep(nanoseconds: 400_000_000)
             await refresh()

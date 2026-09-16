@@ -60,19 +60,6 @@ enum LifeArea: String, Codable, CaseIterable, Identifiable, Hashable {
         }
     }
 
-    var tint: Color {
-        switch self {
-        case .wealth:    return Palette.gold
-        case .love:      return Palette.rose
-        case .health:    return Palette.teal
-        case .work:      return Palette.violet
-        case .home:      return Palette.amber
-        case .spirit:    return Palette.lilac
-        case .adventure: return Palette.sky
-        case .freedom:   return Palette.mint
-        }
-    }
-
     /// A starting line offered during onboarding, already in the received tense.
     var seedAffirmation: String {
         switch self {
@@ -266,16 +253,6 @@ enum EvidenceKind: String, Codable, CaseIterable, Identifiable, Hashable {
         }
     }
 
-    var tint: Color {
-        switch self {
-        case .sign:          return Palette.gold
-        case .synchronicity: return Palette.lilac
-        case .nudge:         return Palette.sky
-        case .win:           return Palette.mint
-        case .received:      return Palette.rose
-        }
-    }
-
     var prompt: String {
         switch self {
         case .sign:          return "Repeating numbers, a song, a feather, the same word twice in a day."
@@ -446,8 +423,7 @@ struct Profile: Codable, Hashable {
     var nightHour: Int = 21
     var notificationsEnabled: Bool = false
     var hapticsEnabled: Bool = true
-    /// Accessibility: complete reps with a tap instead of typing them out.
-    var tapToComplete: Bool = false
+    /// Stills the sky: no glow behind the moon, no stars.
     var calmMotion: Bool = false
     var startedAt: Date = Date()
 
@@ -462,8 +438,6 @@ struct Profile: Codable, Hashable {
     // when they're ready; a clock counts up so slowness is rewarded rather
     // than punished.
 
-    /// Play the affirmation back in the user's own recorded voice at the end.
-    var playOwnVoice: Bool = true
     /// Show the elapsed clock during a session.
     var showVisualisationClock: Bool = true
 
@@ -485,19 +459,19 @@ struct Profile: Codable, Hashable {
         nightHour            = c.get(.nightHour, 21)
         notificationsEnabled = c.get(.notificationsEnabled, false)
         hapticsEnabled       = c.get(.hapticsEnabled, true)
-        tapToComplete        = c.get(.tapToComplete, false)
         calmMotion           = c.get(.calmMotion, false)
         startedAt            = c.get(.startedAt, Date())
         appearance           = c.get(.appearance, Appearance.auto)
-        playOwnVoice         = c.get(.playOwnVoice, true)
         showVisualisationClock = c.get(.showVisualisationClock, true)
         ownerUnlocked        = c.get(.ownerUnlocked, false)
         moonNightAlerts      = c.get(.moonNightAlerts, true)
     }
 
-    /// The skin to draw with right now, honouring the user's own hours.
+    /// The skin to draw with right now, honouring the user's own hours and
+    /// their motion preference.
     var skin: Skin {
         Skin.of(appearance, nightHour: nightHour, morningHour: morningHour)
+            .stilled(calmMotion)
     }
 
     func hour(for window: RitualWindow) -> Int {

@@ -91,6 +91,17 @@ struct Skin: Equatable {
     let stars: Bool
     let isNight: Bool
 
+    /// Still the sky: no glow behind the moon, no stars. Set from the user's
+    /// own switch in You, and honoured by MoonDisc and NightStars.
+    var calm: Bool = false
+
+    /// A copy of this skin with the sky stilled (or not).
+    func stilled(_ on: Bool) -> Skin {
+        var copy = self
+        copy.calm = on
+        return copy
+    }
+
     /// Button fill. Ink on paper, paper on ink — never a colour.
     var buttonFill: Color { ink }
     var buttonInk: Color { ground }
@@ -145,7 +156,7 @@ struct Skin: Equatable {
 }
 
 extension Color {
-    /// Kept separate from the old `Color(hex:)` so both files can coexist.
+    /// Hex helper for the skin colours below.
     init(hex2: UInt32, opacity: Double = 1) {
         self.init(
             .sRGB,
@@ -251,7 +262,7 @@ struct MoonDisc: View {
     private var terminator: Double { abs(cos(2 * Double.pi * fraction)) }
 
     private var glowOn: Bool {
-        glowing && skin.isNight && !reduceTransparency
+        glowing && skin.isNight && !reduceTransparency && !skin.calm
     }
 
     var body: some View {
@@ -317,7 +328,7 @@ struct NightStars: View {
     }
 
     var body: some View {
-        if skin.stars {
+        if skin.stars && !skin.calm {
             Canvas { context, size in
                 for star in stars {
                     let rect = CGRect(

@@ -39,11 +39,15 @@ enum SharedStore {
         }
     }
 
+    /// Returns `.empty` rather than `.placeholder` when there is nothing to
+    /// read. A widget showing an invented line would be worse than one
+    /// showing none — and this is exactly what happens on a build without
+    /// the App Group, so it has to be honest.
     static func read() -> SharedSnapshot {
-        guard let url, let data = try? Data(contentsOf: url) else { return .placeholder }
+        guard let url, let data = try? Data(contentsOf: url) else { return .empty }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return (try? decoder.decode(SharedSnapshot.self, from: data)) ?? .placeholder
+        return (try? decoder.decode(SharedSnapshot.self, from: data)) ?? .empty
     }
 }
 

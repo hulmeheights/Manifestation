@@ -13,7 +13,14 @@
 //     Nothing can style them, in any app.
 //   · What we DO control: the title, the subtitle, the body, the sound, and
 //     one attachment. The attachment is the only real visual lever, so every
-//     notification here carries tonight's actual moon as its thumbnail.
+//     notification here carries a drawn card — the same near-black ground,
+//     glowing moon and cream type as the Live Activity, with your own line
+//     on it. Pull the banner down and you see the whole card.
+//   · A notification that fires while the app is open is thrown away by iOS
+//     unless a delegate says otherwise. NotificationRelay is that delegate.
+//   · Time Sensitive delivery (breaking through a Focus) needs a separate
+//     entitlement from Apple, so these are ordinary notifications. Nothing
+//     here pretends otherwise.
 //
 //  Nothing leaves the device.
 //
@@ -104,13 +111,14 @@ enum Whispers {
                     content.sound = .default
                     content.userInfo = ["window": window.rawValue]
                     content.threadIdentifier = "moonwrit.daily"
-                    content.interruptionLevel = window == .night ? .timeSensitive : .active
 
-                    if let url = MoonImage.temporaryFile(
+                    if let url = MoonImage.cardFile(
                         fraction: moment.progress,
+                        line: content.title,
+                        caption: "\(window.title) · \(window.reps)× · \(moment.phase.title)",
                         name: "w-\(day)-\(window.rawValue)"
                     ), let attachment = try? UNNotificationAttachment(
-                        identifier: "moon", url: url, options: nil
+                        identifier: "card", url: url, options: nil
                     ) {
                         content.attachments = [attachment]
                     }
@@ -160,13 +168,14 @@ enum Whispers {
                 content.body = night.event.amplified ?? moment.phase.power.headline
                 content.sound = .default
                 content.threadIdentifier = "moonwrit.moon"
-                content.interruptionLevel = night.event.isMajor ? .timeSensitive : .active
 
-                if let url = MoonImage.temporaryFile(
+                if let url = MoonImage.cardFile(
                     fraction: moment.progress,
+                    line: night.title,
+                    caption: strengthDescription(strength),
                     name: "m-\(index)"
                 ), let attachment = try? UNNotificationAttachment(
-                    identifier: "moon", url: url, options: nil
+                    identifier: "card", url: url, options: nil
                 ) {
                     content.attachments = [attachment]
                 }
@@ -197,31 +206,73 @@ enum Whispers {
 
     // MARK: - Test
 
-    /// Fires in five seconds so you can see exactly what one looks like.
-    static func sendTest(line: String) {
+    /// What happened when you asked for one. The button reports this back
+    /// rather than doing nothing and leaving you guessing.
+    enum TestResult {
+        case sent
+        case needsPermission
+        case blockedInSettings
+        case failed(String)
+    }
+
+    /// Fires in five seconds so you can see exactly what one looks like —
+    /// including while you're still looking at the app, because
+    /// NotificationRelay tells iOS to show it anyway.
+    ///
+    /// Asks for permission first if it hasn't been asked, so the button works
+    /// on a fresh install instead of silently failing.
+    static func sendTest(line: String) async -> TestResult {
+        let center = UNUserNotificationCenter.current()
+        let status = await center.notificationSettings().authorizationStatus
+
+        switch status {
+        case .denied:
+            return .blockedInSettings
+        case .notDetermined:
+            let granted = await requestAuthorisation()
+            guard granted else { return .needsPermission }
+        default:
+            break
+        }
+
         let moment = MoonPhase.moment()
         let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        let content = UNMutableNotificationContent()
-        content.title = trimmed.isEmpty
+        let headline = trimmed.isEmpty
             ? "Nine times, the last thing you hand your sleeping mind."
             : trimmed
-        content.subtitle = "Night · 9× · \(moment.phase.title)"
+        let caption = "\(moment.phase.title) · Tonight"
+
+        let content = UNMutableNotificationContent()
+        content.title = headline
+        content.subtitle = caption
         content.body = moment.phase.power.headline
         content.sound = .default
         content.threadIdentifier = "moonwrit.daily"
 
-        if let url = MoonImage.temporaryFile(fraction: moment.progress, name: "test"),
-           let attachment = try? UNNotificationAttachment(identifier: "moon", url: url, options: nil) {
+        if let url = MoonImage.cardFile(
+            fraction: moment.progress,
+            line: headline,
+            caption: caption,
+            name: "test-\(Int(Date().timeIntervalSince1970))"
+        ), let attachment = try? UNNotificationAttachment(
+            identifier: "card", url: url, options: nil
+        ) {
             content.attachments = [attachment]
         }
 
-        UNUserNotificationCenter.current().add(
-            UNNotificationRequest(
-                identifier: prefix + "test",
-                content: content,
-                trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
-            )
+        // A fresh identifier every time, so tapping twice gives you two
+        // rather than the second quietly replacing the first.
+        let request = UNNotificationRequest(
+            identifier: prefix + "test." + UUID().uuidString,
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
         )
+
+        do {
+            try await center.add(request)
+            return .sent
+        } catch {
+            return .failed(error.localizedDescription)
+        }
     }
 }

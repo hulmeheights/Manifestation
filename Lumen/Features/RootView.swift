@@ -2,10 +2,13 @@
 //  RootView.swift
 //  Lumen
 //
+//  Onboarding until it's done, then the app. Nothing else lives here.
+//
 
 import SwiftUI
 
 struct RootView: View {
+
     @Environment(ManifestStore.self) private var store
 
     var body: some View {
@@ -13,46 +16,11 @@ struct RootView: View {
             if store.profile.hasOnboarded {
                 MoonwritRoot()
             } else {
-                OnboardingView()
+                OpeningScreen()
                     .transition(.opacity)
             }
         }
-        .task {
-            // Keep the daily whispers carrying the current focus line.
-            Whispers.reschedule(
-                profile: store.profile,
-                line: store.focusIntention?.affirmation ?? ""
-            )
-            Whispers.scheduleMoonNights(
-                enabled: store.profile.notificationsEnabled && store.profile.moonNightAlerts
-            )
-            store.publishSnapshot()
-        }
-    }
-}
-
-private struct MainTabs: View {
-    @State private var selection: Int = 0
-
-    var body: some View {
-        TabView(selection: $selection) {
-            TodayView()
-                .tabItem { Label("Today", systemImage: "sparkles") }
-                .tag(0)
-
-            IntentionsView()
-                .tabItem { Label("Intentions", systemImage: "star.fill") }
-                .tag(1)
-
-            EvidenceView()
-                .tabItem { Label("Evidence", systemImage: "eye.fill") }
-                .tag(2)
-
-            ScriptingView()
-                .tabItem { Label("Scripting", systemImage: "book.closed.fill") }
-                .tag(3)
-        }
-        .tint(Palette.gold)
-        .preferredColorScheme(.dark)
+        .animation(.easeInOut(duration: 0.35), value: store.profile.hasOnboarded)
+        .task { store.syncOutside() }
     }
 }

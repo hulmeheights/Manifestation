@@ -383,8 +383,20 @@ final class ManifestStore {
 
     // MARK: - Reset
 
+    /// Replace everything with a restored backup.
+    func restore(_ restored: ManifestState) {
+        state = restored
+        flush()
+    }
+
     func eraseEverything() {
         state = ManifestState()
         flush()
+
+        // Nothing should outlive the erase: not the queued reminders, not the
+        // card on the lock screen, not what the widgets are holding.
+        Whispers.cancelAll()
+        LiveNote.end()
+        publishSnapshot()
     }
 }

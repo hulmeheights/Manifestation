@@ -104,7 +104,7 @@ struct LinesScreen: View {
             Button("It arrived", role: .none) {
                 if let line = markingReceived {
                     store.markReceived(line)
-                    store.publishSnapshot()
+                    store.syncOutside()
                     Haptics.received(store.profile.hapticsEnabled)
                 }
                 markingReceived = nil
@@ -233,7 +233,7 @@ private struct FocusExplainer: View {
 
                 Button("Give this one the light") {
                     store.setFocus(candidate)
-                    store.publishSnapshot()
+                    store.syncOutside()
                     Haptics.seal(store.profile.hapticsEnabled)
                     dismiss()
                 }

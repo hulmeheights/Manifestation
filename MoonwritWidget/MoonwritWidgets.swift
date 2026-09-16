@@ -156,7 +156,11 @@ struct HomeWidgetView: View {
 
             Spacer(minLength: 6)
 
-            if entry.configuration.lead == .reps || !entry.snapshot.hasLine {
+            if !entry.snapshot.hasLine && entry.snapshot.repsHeld == 0 {
+                Text("Open Moonwrit\nand write your line.")
+                    .font(Ink.body(13, weight: .bold))
+                    .foregroundStyle(skin.ink)
+            } else if entry.configuration.lead == .reps || !entry.snapshot.hasLine {
                 Text("\(entry.snapshot.repsHeld)")
                     .font(Ink.display(30))
                     .foregroundStyle(skin.ink)
@@ -228,7 +232,7 @@ struct MoonwritHomeWidget: Widget {
         ) { entry in
             HomeWidgetView(entry: entry)
         }
-        .configurationDisplayName("Your line")
+        .configurationDisplayName("Moonwrit")
         .description("The line you're writing, tonight's moon, and where you are in the nine.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }

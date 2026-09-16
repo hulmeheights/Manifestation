@@ -142,7 +142,7 @@ struct LineEditor: View {
             fresh.isFocus = store.focusIntention == nil
             store.add(fresh)
         }
-        store.publishSnapshot()
+        store.syncOutside()
         Haptics.seal(store.profile.hapticsEnabled)
         dismiss()
     }
@@ -330,7 +330,7 @@ struct ProofComposer: View {
                 intentionID: store.focusIntention?.id
             )
         )
-        store.publishSnapshot()
+        store.syncOutside()
         Haptics.received(store.profile.hapticsEnabled)
         dismiss()
     }

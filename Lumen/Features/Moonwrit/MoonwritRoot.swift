@@ -71,9 +71,9 @@ struct MoonwritRoot: View {
             RitualScreen(intention: launch.intention, window: launch.window)
                 .skin(skin)
         }
-        .task { store.publishSnapshot() }
+        .task { store.syncOutside() }
         .onChange(of: scenePhase) { _, phase in
-            if phase != .active { store.publishSnapshot() }
+            if phase != .active { store.syncOutside() }
         }
     }
 }
