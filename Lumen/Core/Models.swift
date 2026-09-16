@@ -517,6 +517,8 @@ struct ManifestState: Codable {
     var evidence: [EvidenceEntry] = []
     var scripts: [ScriptEntry] = []
     var rituals: [RitualRecord] = []
+    /// Who you're becoming, and the votes cast towards it. See Becoming.swift.
+    var character: CharacterSheet = CharacterSheet()
 
     init() {}
 
@@ -527,5 +529,6 @@ struct ManifestState: Codable {
         evidence   = c.get(.evidence, [EvidenceEntry]())
         scripts    = c.get(.scripts, [ScriptEntry]())
         rituals    = c.get(.rituals, [RitualRecord]())
+        character  = c.get(.character, CharacterSheet())
     }
 }

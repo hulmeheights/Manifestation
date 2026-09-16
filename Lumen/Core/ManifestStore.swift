@@ -86,6 +86,35 @@ final class ManifestStore {
         }
     }
 
+    // MARK: - Becoming
+
+    var character: CharacterSheet {
+        get { state.character }
+        set {
+            state.character = newValue
+            scheduleSave()
+        }
+    }
+
+    /// Cast a vote. Doing the same act twice in one day counts once —
+    /// the point is the day, not the tally.
+    func castVote(act: Act, trait: Trait, note: String = "") {
+        guard !state.character.didToday(act.id) else { return }
+        state.character.votes.append(
+            Vote(actID: act.id, traitID: trait.id, date: Date(), note: note)
+        )
+        scheduleSave()
+    }
+
+    /// Undo today's vote, for the times you ticked it and then didn't do it.
+    func withdrawVote(actID: String) {
+        let today = Date()
+        state.character.votes.removeAll {
+            $0.actID == actID && Calendar.current.isDate($0.date, inSameDayAs: today)
+        }
+        scheduleSave()
+    }
+
     // MARK: - Intentions
 
     var intentions: [Intention] { state.intentions }

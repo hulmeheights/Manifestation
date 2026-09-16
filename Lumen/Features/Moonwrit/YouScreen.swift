@@ -23,6 +23,8 @@ struct YouScreen: View {
     @State private var showingUnlock = false
     @State private var unlockAttempt = ""
     @State private var unlockFailed = false
+    @State private var live = false
+    @State private var liveRefused = false
 
     var body: some View {
         @Bindable var bound = store
@@ -116,22 +118,36 @@ struct YouScreen: View {
                 notificationsBlock
                     .padding(.top, 10)
 
+                // MARK: The lock screen
+
+                Eyebrow(text: "Lock screen", trailing: liveLabel)
+                    .padding(.top, Space.section)
+
+                lockScreenBlock
+                    .padding(.top, 10)
+
                 // MARK: Widgets
 
                 Eyebrow(text: "Widgets")
                     .padding(.top, Space.section)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Not switched on yet")
+                    Text("Home screen")
                         .font(Ink.body(15, weight: .semibold))
                         .foregroundStyle(skin.ink)
 
-                    Text("Home screen and lock screen widgets are written and ready, but a widget is a second app inside the app, and that has to be added once in Xcode — it can't be done from code. It takes about five minutes. WIDGETS.md in the project folder has every click.")
+                    Text("Long-press an empty part of the home screen, tap + at the top, search Moonwrit. Small or medium. Long-press the widget afterwards and tap Edit Widget to choose the theme, what it leads with, and whether the moon shows.")
                         .font(Ink.small)
                         .foregroundStyle(skin.dim)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text("Once it's on: long-press the home screen, tap +, search Moonwrit. For the lock screen, long-press the lock screen, tap Customise, then the area under the clock. Both stay there permanently \u{2014} no \u{201C}go live\u{201D}, no expiry.")
+                    Rectangle().fill(skin.hairline).frame(height: 1).padding(.vertical, 4)
+
+                    Text("Lock screen")
+                        .font(Ink.body(15, weight: .semibold))
+                        .foregroundStyle(skin.ink)
+
+                    Text("Long-press the lock screen, tap Customise, tap the lock screen itself, then the strip under the clock. Search Moonwrit. That one is permanent \u{2014} it never expires and you never have to re-add it.")
                         .font(Ink.small)
                         .foregroundStyle(skin.dim)
                         .fixedSize(horizontal: false, vertical: true)
@@ -248,6 +264,84 @@ struct YouScreen: View {
     }
 
     @ViewBuilder
+    // MARK: - The lock screen card
+
+    private var liveLabel: String {
+        if !LiveNote.isAvailable { return "Blocked in iOS" }
+        return live ? "Live" : "Off"
+    }
+
+    private var lockScreenBlock: some View {
+        VStack(alignment: .leading, spacing: 12) {
+
+            Text(live ? "Your line is on the lock screen" : "Put your line on the lock screen")
+                .font(Ink.body(15, weight: .semibold))
+                .foregroundStyle(skin.ink)
+
+            Text("This is the one that sits on top of everything \u{2014} above the clock area, in the Dynamic Island, the first thing you read every time you pick the phone up. It stays until you take it down, and it counts your reps up as you write them.")
+                .font(Ink.small)
+                .foregroundStyle(skin.dim)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if store.focusIntention == nil {
+                Text("Put a line in the light first \u{2014} Write \u{2192} All lines.")
+                    .font(Ink.small)
+                    .foregroundStyle(skin.evidence)
+            } else if !LiveNote.isAvailable {
+                Text("iOS has Live Activities switched off for Moonwrit. Settings \u{2192} Moonwrit \u{2192} Live Activities.")
+                    .font(Ink.small)
+                    .foregroundStyle(skin.evidence)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                .buttonStyle(.outline)
+            } else if live {
+                Button("Take it down") {
+                    LiveNote.end()
+                    live = false
+                }
+                .buttonStyle(.outline)
+                .frame(maxWidth: .infinity)
+            } else {
+                Button("Push it live") {
+                    let ok = store.pinLineLive()
+                    live = ok
+                    liveRefused = !ok
+                }
+                .buttonStyle(.ink)
+                .frame(maxWidth: .infinity)
+            }
+
+            if liveRefused {
+                Text("iOS refused. That is nearly always Live Activities being off for Moonwrit in Settings.")
+                    .font(Ink.small)
+                    .foregroundStyle(skin.evidence)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Text("iOS takes it down on its own after about eight hours on screen. Writing a rep puts it back up.")
+                .font(Ink.tiny)
+                .foregroundStyle(skin.ghost)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: Space.radius, style: .continuous).fill(skin.card)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Space.radius, style: .continuous)
+                .strokeBorder(skin.hairline, lineWidth: 1)
+        )
+        .onAppear { live = LiveNote.isLive }
+    }
+
+    // MARK: - Notifications
+
     private var notificationsBlock: some View {
         @Bindable var bound = store
 
@@ -476,7 +570,7 @@ struct GuideScreen: View {
                             .foregroundStyle(skin.ink)
                             .padding(.top, 8)
 
-                        Text("Nine questions, answered honestly. Come back whenever.")
+                        Text("Eleven questions, answered honestly. Come back whenever.")
                             .font(Ink.body(15))
                             .foregroundStyle(skin.dim)
                             .padding(.top, 12)

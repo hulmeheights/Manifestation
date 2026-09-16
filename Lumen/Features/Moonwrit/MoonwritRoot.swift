@@ -9,7 +9,7 @@
 import SwiftUI
 
 enum MoonwritTab: String, CaseIterable, Identifiable {
-    case today, see, cycle, evidence, you
+    case today, see, become, cycle, evidence, you
 
     var id: String { rawValue }
 
@@ -17,6 +17,7 @@ enum MoonwritTab: String, CaseIterable, Identifiable {
         switch self {
         case .today:    return "Write"
         case .see:      return "See"
+        case .become:   return "Become"
         case .cycle:    return "Cycle"
         case .evidence: return "Proof"
         case .you:      return "You"
@@ -27,6 +28,7 @@ enum MoonwritTab: String, CaseIterable, Identifiable {
         switch self {
         case .today:    return "pencil.line"
         case .see:      return "eye"
+        case .become:   return "figure.stand"
         case .cycle:    return "moon.stars"
         case .evidence: return "sparkles"
         case .you:      return "person"
@@ -53,6 +55,7 @@ struct MoonwritRoot: View {
                     switch tab {
                     case .today:    TodayScreen(launch: $ritual)
                     case .see:      PictureScreen()
+                    case .become:   BecomeScreen()
                     case .cycle:    CycleScreen()
                     case .evidence: ProofScreen()
                     case .you:      YouScreen()
@@ -92,7 +95,9 @@ private struct MoonwritTabBar: View {
                             .font(.system(size: 17, weight: .medium))
                         Text(item.title.uppercased())
                             .font(Ink.mono(9, weight: .semibold))
-                            .kerning(1.1)
+                            .kerning(0.8)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
                     }
                     .foregroundStyle(selection == item ? skin.ink : skin.dim)
                     .frame(maxWidth: .infinity)

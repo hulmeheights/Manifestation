@@ -101,6 +101,34 @@ extension ManifestStore {
         )
     }
 
+    // MARK: - The lock screen card
+
+    /// The moving half of the Live Activity, built from where the practice
+    /// actually is right now.
+    var liveState: MoonwritAttributes.ContentState {
+        let moment = moon
+        return MoonwritAttributes.ContentState(
+            repsToday: repsToday,
+            repsTarget: dayTarget,
+            windowTitle: currentWindow.title,
+            note: moment.phase.power.headline,
+            moonFraction: moment.progress
+        )
+    }
+
+    /// Push the line to the lock screen. Returns false when iOS said no.
+    @discardableResult
+    func pinLineLive() -> Bool {
+        guard let line = focusIntention?.affirmation, !line.isEmpty else { return false }
+        return LiveNote.pin(line: line, state: liveState)
+    }
+
+    /// Keep the card honest after a rep. Free when nothing is live.
+    func refreshLive() {
+        guard LiveNote.isLive else { return }
+        LiveNote.refresh(liveState)
+    }
+
     // MARK: - Paid
 
     /// True when everything is unlocked. Owner unlock is a local flag so your

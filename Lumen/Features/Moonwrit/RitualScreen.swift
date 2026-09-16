@@ -148,6 +148,10 @@ struct RitualScreen: View {
         recorded = true
         store.recordRitual(intentionID: intention.id, window: window, reps: done)
         store.publishSnapshot()
+
+        // If the card is on the lock screen, move it. If it isn't, and there
+        // was one earlier today, put it back — writing is what keeps it alive.
+        store.refreshLive()
     }
 
     // MARK: - Sealed

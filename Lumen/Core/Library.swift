@@ -235,6 +235,16 @@ enum Library {
 
     static let guide: [Card] = [
         Card(
+            question: "Is writing it enough on its own?",
+            answer: "No, and the app would be lying if it said otherwise.",
+            detail: "Writing the line trains the sentence. It does not train the person. That is what the Become tab is for \u{2014} you take the character you are claiming to be, pull them apart into things you could actually do today, and do one. The line is the claim; the acts are what make the claim true. Do only the first and you end up with a very well-rehearsed sentence about somebody who does not exist yet."
+        ),
+        Card(
+            question: "What is the difference between impersonating and becoming?",
+            answer: "Which end you start from.",
+            detail: "Impersonating takes the surface \u{2014} the walk, the suit, the line \u{2014} and puts it on. It needs an audience and it comes off the moment you are tired. Becoming goes the other way: you do the small unglamorous acts, repeatedly, and the identity is what is left behind. The test is one question. Would you still do this if nobody ever found out? If yes, it is becoming. If the whole appeal is being seen doing it, it is a costume. Become \u{2192} Impersonating and becoming has the long version."
+        ),
+        Card(
             question: "Why present tense?",
             answer: "Because the future tense keeps it in the future.",
             detail: "\u{201C}I will have\u{201D} is a statement about not having it. \u{201C}I have\u{201D} puts it in the only place anything can actually happen, which is now. You are not lying to yourself \u{2014} you are deciding."

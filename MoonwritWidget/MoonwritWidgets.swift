@@ -1,26 +1,16 @@
 //
 //  MoonwritWidgets.swift
+//  MoonwritWidget
 //
-//  ⚠️  THIS FILE IS NOT IN THE APP TARGET AND MUST NOT BE.
+//  The permanent widgets: home screen and lock screen, both customisable by
+//  long-pressing them and choosing Edit Widget.
 //
-//  It belongs to a Widget Extension target you create in Xcode:
-//      File → New → Target… → Widget Extension
-//      Name it "MoonwritWidget", untick "Include Live Activity",
-//      tick "Include Configuration Intent".
+//  This target is wired up in Lumen.xcodeproj already — there is nothing to
+//  do in Xcode. Everything in the MoonwritWidget folder belongs to the
+//  extension; everything in Shared/ is compiled into both it and the app.
 //
-//  Then:
-//   1. Delete the placeholder .swift file Xcode generates, and drag this file
-//      into the new target instead.
-//   2. Select the App Group capability on BOTH targets (app + widget) and use
-//      the same identifier as SharedStore.appGroup.
-//   3. Tick the widget target's membership on these three files, in the File
-//      Inspector on the right:
-//          Lumen/Core/MoonPhase.swift
-//          Lumen/Core/SharedSnapshot.swift
-//          Lumen/Design/Moonlight.swift
-//
-//  Both widgets below are permanent. The Lock Screen one is a widget, not a
-//  Live Activity — it stays where you put it and never expires.
+//  The Live Activity — the card you push live from inside the app and which
+//  then stays on the lock screen — is next door in MoonwritLiveActivity.swift.
 //
 
 import WidgetKit
@@ -337,5 +327,6 @@ struct MoonwritWidgetBundle: WidgetBundle {
     var body: some Widget {
         MoonwritHomeWidget()
         MoonwritLockWidget()
+        MoonwritLiveActivity()
     }
 }

@@ -1,96 +1,117 @@
-# Turning the widgets on
+# Widgets, the lock screen, and notifications
 
-Five minutes, once. The widget code is already written — `LumenWidget/MoonwritWidgets.swift`
-— but a widget extension is a **second binary** inside the app, and that has to
-be added to the Xcode project by hand. It cannot be done from code, which is why
-it's still off.
-
-Do this on the Mac with `Lumen.xcodeproj` open.
+All three are built and wired into `Lumen.xcodeproj`. There is nothing to add
+in Xcode. Open the project, hit ⌘R, and the widget extension builds and
+installs alongside the app automatically.
 
 ---
 
-## 1 · Add the target
+## What now exists
 
-1. Menu bar → **File → New → Target…**
-2. Search **Widget Extension**. Select it. **Next.**
-3. **Product Name:** `MoonwritWidget`
-4. **Untick** "Include Live Activity" — we don't want one; lock screen widgets
-   are permanent and Live Activities are the ones that expire.
-5. **Tick** "Include Configuration App Intent" — that's what makes the widget
-   customisable.
-6. **Finish.**
-7. If it asks "Activate MoonwritWidget scheme?" → **Cancel**. You want to keep
-   running the main app, not the widget on its own.
+There are **three different things**, and they are genuinely different
+features in iOS. It's worth knowing which is which, because they behave
+differently and people mix them up constantly.
 
-## 2 · Swap in the real code
+### 1 · Home screen widget — permanent
 
-Xcode will have created a folder called `MoonwritWidget` with three or four
-placeholder files.
+Long-press an empty part of the home screen → **+** top-left → search
+**Moonwrit** → Small or Medium → **Add Widget**.
 
-1. Select every file inside that folder **except** `Info.plist` and the
-   `.entitlements` file. Right-click → **Delete → Move to Trash**.
-2. In Finder, drag `LumenWidget/MoonwritWidgets.swift` into the
-   `MoonwritWidget` group in Xcode's sidebar.
-3. In the dialog that appears: **untick** "Copy items if needed", and under
-   "Add to targets" **tick MoonwritWidget only** — not Lumen.
+Long-press the widget afterwards → **Edit Widget** to change:
+- **Theme** — match device / Night / Day
+- **Show** — your line / tonight's moon / today's reps
+- whether the moon is drawn
 
-## 3 · Share data between them
+It updates itself and never expires.
 
-The widget can't read the app's save file directly. They need a shared box.
+### 2 · Lock screen widget — permanent
 
-1. Select the blue **Lumen** project at the top of the sidebar.
-2. Select the **Lumen** target → **Signing & Capabilities** tab.
-3. Click **+ Capability** → double-click **App Groups**.
-4. Click the **+** under the empty list. Name it:
-   `group.com.hulmeheights.lumen`
-   (or anything starting `group.`, as long as you use the same one everywhere).
-5. Now select the **MoonwritWidget** target → **Signing & Capabilities** →
-   **+ Capability** → **App Groups** → tick the *same* group.
+Long-press the lock screen → **Customise** → tap the lock screen → tap the
+strip under the clock → search **Moonwrit**.
 
-If you used a different name, open `Lumen/Core/SharedSnapshot.swift` and change
-the `appGroup` constant at the top to match.
+Three shapes: circular (moon + reps ring), rectangular (your line), inline
+(one line of text above the clock). Also customisable via Edit Widget.
 
-## 4 · Let the widget see the shared code
+Once added it is there forever. You never re-add it.
 
-The widget needs three files from the app. This is a checkbox, not a copy.
+### 3 · Live Activity — the one you push live
 
-For **each** of these files — click it in the sidebar, then look at the
-**File Inspector** on the right (the ⌥⌘1 panel), find **Target Membership**,
-and tick **MoonwritWidget** as well as Lumen:
+**You → Lock screen → Push it live.**
 
-- `Lumen/Core/MoonPhase.swift`
-- `Lumen/Core/SharedSnapshot.swift`
-- `Lumen/Design/Moonlight.swift`
+This is the Mononote-style one. It is a full-width card that appears
+*immediately* on the lock screen, above everything, and in the Dynamic Island
+on the phones that have one. It holds your line and counts your reps up as
+you write them.
 
-## 5 · Run it
+Things that are true about it, because they're set by iOS and not by us:
 
-Select the **Lumen** scheme and your iPad, then ⌘R as normal.
-
-**Home screen:** long-press an empty bit of home screen → **+** top-left →
-search **Moonwrit** → pick Small or Medium → **Add Widget**.
-Long-press the widget → **Edit Widget** to change the theme (Match device /
-Night / Light), what it leads with, and whether the moon shows.
-
-**Lock screen:** long-press the lock screen → **Customise** → tap the lock
-screen thumbnail → tap the area under the clock → search **Moonwrit**.
-
-Both are permanent. There's no "go live" and no expiry — that's Live
-Activities, which are a different feature and not what these are.
+- Only the app can start one, and only while it's open on screen. Nothing can
+  start one in the background — that's an iOS rule, not a missing feature.
+- It survives the app being closed and the phone being locked. That's the
+  point of it.
+- iOS ends it on its own after about **eight hours** on screen. Writing a rep
+  puts it back up, so in practice it lives as long as the practice does.
+- Only one at a time. Pushing it live again replaces the old card.
+- **You → Lock screen → Take it down** removes it instantly.
+- If it says "Blocked in iOS", the switch is at Settings → Moonwrit →
+  Live Activities.
 
 ---
 
-## If something goes wrong
+## Notifications
 
-**"No such module 'WidgetKit'"** — the file is in the app target instead of the
-widget target. Check Target Membership on `MoonwritWidgets.swift`: it should be
-ticked for MoonwritWidget *only*.
+**You → Notifications.** Allow them once, then:
 
-**"Cannot find 'MoonPhase' in scope"** — step 4 wasn't done, or one of the three
-files was missed.
+- **Moon nights** — the new moon, the full moon, supermoons and eclipses,
+  with what each one is good for.
+- **Your three windows** — morning, afternoon, night, at the hours you set
+  further down that screen.
+- **Send me one in 5 seconds** — the full-width button. It fires a real
+  notification with the current moon drawn as the attachment, so you can see
+  exactly what they look like before committing to them.
 
-**Widget shows placeholder text forever** — the App Group names don't match
-between the two targets, or don't match `SharedSnapshot.swift`. All three have
-to be identical.
+Two things about how they look, which are iOS's decisions and not ours:
 
-**"Invalid redeclaration"** — the Xcode-generated placeholder files weren't
-deleted in step 2.
+- The small icon on the left of a notification is **always the installed
+  build's app icon**. If you changed the icon in the app, notifications keep
+  showing the old one until you rebuild and reinstall.
+- The layout of a notification is fixed by the system. The only thing an app
+  can control visually is the **attachment** — the image on the right. Ours
+  is the moon as it is on the night the notification fires, drawn at send
+  time. That's why the app schedules fourteen days individually instead of
+  one repeating alert: a repeating notification would carry the wrong moon.
+
+---
+
+## If the build fails on signing
+
+The widget and the app share an **App Group**
+(`group.com.hulmeheights.lumen`) so the widget can read your line. App Groups
+need a **paid** Apple Developer account. On a free personal team, signing will
+fail with something about entitlements or provisioning profiles.
+
+Two options:
+
+1. Pay the £79 — you need it for the App Store anyway, and everything works.
+2. Temporarily drop the group: in `Lumen.xcodeproj/project.pbxproj`, delete
+   the two `CODE_SIGN_ENTITLEMENTS = Support/...entitlements;` lines. The app
+   and the Live Activity keep working; the home and lock screen widgets fall
+   back to showing the moon and a prompt instead of your line, because
+   without the group they genuinely cannot see it.
+
+Paste me the error either way and I'll do it.
+
+---
+
+## Where the code lives
+
+| Folder | Target | What's in it |
+|---|---|---|
+| `Lumen/` | app only | Everything you see inside the app |
+| `Shared/` | **both** | `MoonPhase.swift`, `Moonlight.swift`, `SharedSnapshot.swift`, `MoonwritActivity.swift` |
+| `MoonwritWidget/` | widget only | `MoonwritWidgets.swift`, `MoonwritLiveActivity.swift` |
+| `Support/` | build settings | entitlements and partial Info.plists for both targets |
+
+Both folders are Xcode *file-system synchronised groups*, so a new `.swift`
+file dropped into either one joins the right target on its own. Nothing to
+tick, ever.
