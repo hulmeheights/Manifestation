@@ -175,11 +175,28 @@ struct TodayScreen: View {
                 .padding(.top, 20)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text(store.suggestedWindow.instruction)
+            Text(moon.power.headline)
                 .font(Ink.body(15))
                 .foregroundStyle(skin.dim)
                 .padding(.top, 10)
                 .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                Text(moon.power.best.title.uppercased())
+                    .font(Ink.tiny)
+                    .kerning(1.6)
+                    .foregroundStyle(skin.evidence)
+
+                HStack(spacing: 3) {
+                    ForEach(1...5, id: \.self) { step in
+                        Capsule()
+                            .fill(step <= moon.strengthTonight ? skin.ink : skin.track)
+                            .frame(width: 10, height: 3)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.top, 12)
         }
     }
 

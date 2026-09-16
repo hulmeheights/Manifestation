@@ -45,7 +45,7 @@ struct CycleScreen: View {
                 phaseStrip
                     .padding(.top, 26)
 
-                stageCard
+                powerCard
                     .padding(.top, 26)
 
                 almanac
@@ -145,23 +145,78 @@ struct CycleScreen: View {
         }
     }
 
-    // MARK: What this phase asks
+    // MARK: What tonight is actually for
 
-    private var stageCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(moon.stage.verbLabel.uppercased())
-                .font(Ink.tiny)
-                .kerning(1.8)
-                .foregroundStyle(skin.evidence)
+    private var powerCard: some View {
+        let power = moon.power
+        let strength = moon.strengthTonight
 
-            Text(moon.stage.title)
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                Text(power.best.title.uppercased())
+                    .font(Ink.tiny)
+                    .kerning(1.8)
+                    .foregroundStyle(skin.evidence)
+
+                Spacer(minLength: 8)
+
+                HStack(spacing: 3) {
+                    ForEach(1...5, id: \.self) { step in
+                        Capsule()
+                            .fill(step <= strength ? skin.ink : skin.track)
+                            .frame(width: 11, height: 3)
+                    }
+                }
+                .accessibilityLabel("Strength \(strength) of 5")
+            }
+
+            Text(power.headline)
                 .font(Ink.title(19))
                 .foregroundStyle(skin.ink)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 10)
 
-            Text(moon.stage.blurb)
+            Text(strengthDescription(strength))
+                .font(Ink.tiny)
+                .kerning(1.3)
+                .foregroundStyle(skin.dim)
+                .padding(.top, 8)
+
+            Text(power.why)
                 .font(Ink.body(14))
                 .foregroundStyle(skin.dim)
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 14)
+
+            if let extra = moon.amplifiedTonight {
+                Text(extra)
+                    .font(Ink.body(14, weight: .semibold))
+                    .foregroundStyle(skin.evidence)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 14)
+            }
+
+            Divider()
+                .overlay(skin.hairline)
+                .padding(.vertical, 14)
+
+            Text("NOT TONIGHT")
+                .font(Ink.tiny)
+                .kerning(1.8)
+                .foregroundStyle(skin.dim)
+
+            Text(power.against)
+                .font(Ink.body(14))
+                .foregroundStyle(skin.dim)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 6)
+
+            Text("The lunar framework is traditional, not physical \u{2014} what it reliably does is give the practice a rhythm, which is most of why practices survive.")
+                .font(Ink.tiny)
+                .foregroundStyle(skin.dim)
+                .opacity(0.75)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 16)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
@@ -172,6 +227,16 @@ struct CycleScreen: View {
             RoundedRectangle(cornerRadius: Space.radius, style: .continuous)
                 .strokeBorder(skin.hairline, lineWidth: 1)
         )
+    }
+
+    private func strengthDescription(_ strength: Int) -> String {
+        switch strength {
+        case 5: return "STRONGEST NIGHT OF THE CYCLE"
+        case 4: return "A STRONG NIGHT"
+        case 3: return "AN ORDINARY WORKING NIGHT"
+        case 2: return "A QUIET NIGHT"
+        default: return "A RESTING NIGHT"
+        }
     }
 }
 
@@ -233,19 +298,6 @@ private struct NightRow: View {
         )
         .contentShape(Rectangle())
         .onTapGesture { withAnimation(.easeOut(duration: 0.2)) { open.toggle() } }
-    }
-}
-
-private extension CycleStage {
-    var verbLabel: String {
-        switch self {
-        case .plant:   return "Plant"
-        case .build:   return "Build"
-        case .press:   return "Press"
-        case .read:    return "Read"
-        case .thank:   return "Thank"
-        case .release: return "Hands off"
-        }
     }
 }
 
