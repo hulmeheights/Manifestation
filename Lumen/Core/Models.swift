@@ -471,6 +471,9 @@ struct Profile: Codable, Hashable {
     /// never pay for your own app.
     var ownerUnlocked: Bool = false
 
+    /// Tell me about the new moon, the full moon, eclipses and supermoons.
+    var moonNightAlerts: Bool = true
+
     init() {}
 
     init(from decoder: Decoder) throws {
@@ -489,6 +492,7 @@ struct Profile: Codable, Hashable {
         playOwnVoice         = c.get(.playOwnVoice, true)
         showVisualisationClock = c.get(.showVisualisationClock, true)
         ownerUnlocked        = c.get(.ownerUnlocked, false)
+        moonNightAlerts      = c.get(.moonNightAlerts, true)
     }
 
     /// The skin to draw with right now, honouring the user's own hours.

@@ -104,7 +104,7 @@ struct PictureScreen: View {
             MoonDisc(fraction: store.moon.progress, size: 86)
                 .frame(maxWidth: .infinity, alignment: .center)
 
-            Text("See it,\nproperly.")
+            Text("You're\nalready there.")
                 .font(Ink.hero)
                 .foregroundStyle(skin.ink)
                 .padding(.top, 34)
@@ -122,6 +122,12 @@ struct PictureScreen: View {
                     .padding(.top, 22)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            Text(Library.pictureRule)
+                .font(Ink.small)
+                .foregroundStyle(skin.evidence)
+                .padding(.top, 16)
+                .fixedSize(horizontal: false, vertical: true)
 
             Spacer()
 
@@ -146,6 +152,13 @@ struct PictureScreen: View {
                 .padding(.horizontal, 26)
                 .id(index)
                 .transition(.opacity)
+
+            Text("Answer it in the present, from inside it.")
+                .font(Ink.small)
+                .foregroundStyle(skin.dim)
+                .multilineTextAlignment(.center)
+                .padding(.top, 20)
+                .padding(.horizontal, 30)
 
             Spacer()
 
@@ -219,7 +232,7 @@ struct PictureScreen: View {
                 .foregroundStyle(skin.ink)
                 .padding(.top, 10)
 
-            Text("One or two lines. This saves into your scripting, so next full moon you can read them back together.")
+            Text(Library.pictureAskDetail)
                 .font(Ink.small)
                 .foregroundStyle(skin.dim)
                 .padding(.top, 12)

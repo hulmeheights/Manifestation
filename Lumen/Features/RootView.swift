@@ -23,6 +23,10 @@ struct RootView: View {
                 profile: store.profile,
                 line: store.focusIntention?.affirmation ?? ""
             )
+            Whispers.scheduleMoonNights(
+                enabled: store.profile.notificationsEnabled && store.profile.moonNightAlerts
+            )
+            store.publishSnapshot()
         }
     }
 }

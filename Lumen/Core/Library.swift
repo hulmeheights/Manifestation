@@ -102,26 +102,38 @@ enum Library {
 
     // MARK: - The Picture
     //
-    // Visualisation. Eight sensory prompts, answered in your head, in order.
-    // Never on a timer — you move when you're ready.
+    // Visualisation. The whole trick is that you are not imagining a thing you
+    // WANT — you are remembering a moment you are already standing in. Every
+    // prompt is written in the present, from inside it, so there is no way to
+    // answer them from the outside looking in.
+
+    static let pictureIntro = """
+    You are not imagining something you want. You are standing in a moment that has already happened.
+
+    Eight questions, answered in your head, from inside it. Present tense, as though you are there right now — because in the only place that matters, you are.
+
+    There is no timer. Take as long as you like on each one.
+    """
+
+    static let pictureRule = "If you catch yourself saying \u{201C}I would\u{201D} or \u{201C}it will be\u{201D}, stop and start that answer again. It is happening now."
 
     static let picturePrompts: [String] = [
-        "Where are you standing?",
-        "What is the light like?",
-        "What can you hear from where you are?",
+        "You are standing in it. Where are you?",
+        "What is the light doing?",
+        "What can you hear right now?",
         "What are you wearing?",
-        "Who else is there?",
-        "What did you just put down?",
+        "Who else is here with you?",
+        "What have you just put down?",
         "What can you smell?",
-        "What is the first thing you say out loud?"
+        "You say something out loud. What is it?"
     ]
 
     /// Shown once the eight are done.
-    static let pictureClose = "Hold it for a moment longer, then let it go."
+    static let pictureClose = "Stay in it a moment longer. Then let it go \u{2014} it\u{2019}s handled."
 
     static let pictureAsk = "What did you see?"
 
-    static let pictureIntro = "Eight questions. Answer them in your head, in as much detail as you can stand. There is no timer — take as long as you like on each one."
+    static let pictureAskDetail = "Write it in the past tense, as though you\u{2019}ve just come back from it. \u{201C}I was standing\u{2026}\u{201D}, not \u{201C}I would be standing\u{2026}\u{201D}"
 
     // MARK: - Starter affirmations, by area
 
@@ -207,6 +219,66 @@ enum Library {
              detail: "\"I am debt free\" still says debt. Try \"I have more than enough\" instead."),
         Rule(title: "Make it yours",
              detail: "If it sounds like a poster, rewrite it. It should sound like you on a good day.")
+    ]
+
+    // MARK: - The guide
+    //
+    // Nobody reads onboarding, so these live in one place you can come back to
+    // and also surface where they're relevant.
+
+    struct Card: Identifiable {
+        let question: String
+        let answer: String
+        let detail: String
+        var id: String { question }
+    }
+
+    static let guide: [Card] = [
+        Card(
+            question: "Why present tense?",
+            answer: "Because the future tense keeps it in the future.",
+            detail: "\u{201C}I will have\u{201D} is a statement about not having it. \u{201C}I have\u{201D} puts it in the only place anything can actually happen, which is now. You are not lying to yourself \u{2014} you are deciding."
+        ),
+        Card(
+            question: "Why type it out every time?",
+            answer: "Because reading is too fast to count.",
+            detail: "Typing is slow. It occupies your hands and your eyes, and it is very hard to do while thinking about something else. That difficulty is the point \u{2014} it is the part that installs. It will feel boring by the fourth rep. Boring is the target."
+        ),
+        Card(
+            question: "Why three, six and nine?",
+            answer: "Three when the day is soft, six when it\u{2019}s loudest, nine as the last thing you hand your sleeping mind.",
+            detail: "The numbers matter less than the fact that there are three of them, spread across the day. Move the hours to fit your life \u{2014} the counts stay put."
+        ),
+        Card(
+            question: "Why the moon?",
+            answer: "Because a practice with no shape becomes a chore.",
+            detail: "The moon gives you a beginning, a middle and a review \u{2014} twenty-nine days you didn\u{2019}t have to invent. It\u{2019}s also the one clock that isn\u{2019}t yours, which helps. And some nights carry far more weight than others; the app will tell you which."
+        ),
+        Card(
+            question: "Why only one line at a time?",
+            answer: "Eighteen reps on one line is a practice. Three each on six lines is a list.",
+            detail: "Write down everything you want \u{2014} there\u{2019}s no limit. Then give the light to the one that changes the most, and let the rest wait. They aren\u{2019}t going anywhere, and nothing you\u{2019}ve written is ever lost."
+        ),
+        Card(
+            question: "What is the See screen for?",
+            answer: "Writing convinces the mind. Seeing makes it specific.",
+            detail: "You are not imagining something you want. You are standing inside a moment that has already happened, and answering questions from in there \u{2014} present tense, first person. If you catch yourself saying \u{201C}it would be\u{201D}, start that answer again. Specific is what makes it feel already true."
+        ),
+        Card(
+            question: "Why write down what shows up?",
+            answer: "Because on the days you don\u{2019}t believe any of it, this is the pile you read.",
+            detail: "It turns \u{201C}it\u{2019}s working\u{201D} from a feeling into a list you can count. Small counts \u{2014} the pile is the point, not the size of any one thing in it. Every other app skips this, and it\u{2019}s the one that does the work."
+        ),
+        Card(
+            question: "Does anything ever go down?",
+            answer: "No. Nothing here is a streak.",
+            detail: "Reps only ever accumulate. A missed day doesn\u{2019}t break anything \u{2014} the cycle moves on and you rejoin it. A big manifestation might run twelve chapters, and that isn\u{2019}t failure; it\u{2019}s twelve chapters of evidence."
+        ),
+        Card(
+            question: "When is it supposed to arrive?",
+            answer: "Whenever it arrives. The full moon is a review, not a deadline.",
+            detail: "What you read back at the full moon is the month\u{2019}s movement \u{2014} the signs, the nudges, the doors that opened. For anything large that\u{2019}s \u{201C}they emailed back\u{201D}, not \u{201C}I have it\u{201D}. You mark it Received the day it actually lands, in any phase, of any cycle."
+        )
     ]
 
     // MARK: - Empty states

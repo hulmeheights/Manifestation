@@ -122,6 +122,7 @@ struct TodayScreen: View {
 
     @Binding var launch: RitualLaunch?
     @State private var writingLine = false
+    @State private var showingLines = false
 
     private var moon: MoonMoment { store.moon }
     private var focus: Intention? { store.focusIntention }
@@ -149,6 +150,9 @@ struct TodayScreen: View {
         .scrollIndicators(.hidden)
         .sheet(isPresented: $writingLine) {
             LineEditor(existing: nil)
+        }
+        .sheet(isPresented: $showingLines) {
+            LinesScreen()
         }
     }
 
@@ -190,8 +194,23 @@ struct TodayScreen: View {
 
     private func lineBlock(_ intention: Intention) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Eyebrow(text: "In the light", trailing: intention.charge.title)
-                .padding(.bottom, 12)
+            HStack(alignment: .firstTextBaseline) {
+                Text("IN THE LIGHT")
+                    .font(Ink.label)
+                    .kerning(1.8)
+                    .foregroundStyle(skin.dim)
+                Spacer(minLength: 8)
+                Button {
+                    showingLines = true
+                } label: {
+                    Text("All lines \u{203A}")
+                        .font(Ink.label)
+                        .kerning(1.4)
+                        .foregroundStyle(skin.evidence)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.bottom, 12)
 
             Text(intention.affirmation)
                 .font(Ink.line)
@@ -214,6 +233,8 @@ struct TodayScreen: View {
             .padding(.top, 7)
         }
         .padding(.top, Space.section)
+        .contentShape(Rectangle())
+        .onTapGesture { showingLines = true }
     }
 
     private var windows: some View {
@@ -251,7 +272,7 @@ struct TodayScreen: View {
                 .foregroundStyle(skin.dim)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Button("Write your line") { writingLine = true }
+            Button("Write your first line") { writingLine = true }
                 .buttonStyle(.ink)
         }
         .padding(.top, Space.section)

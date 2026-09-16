@@ -25,6 +25,64 @@ enum Whispers {
         return granted ?? false
     }
 
+    /// How many reminders are actually queued with the system.
+    static func pendingCount() async -> Int {
+        let ids = Set(RitualWindow.allCases.map { prefix + $0.rawValue })
+        let pending = await UNUserNotificationCenter.current().pendingNotificationRequests()
+        return pending.filter { ids.contains($0.identifier) }.count
+    }
+
+    /// Fires in five seconds so the user can see what one looks like.
+    static func sendTest(line: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "Night \u{2014} 9\u{00D7}"
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        content.body = trimmed.isEmpty
+            ? "Nine times, the last thing you hand your sleeping mind."
+            : trimmed
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: prefix + "test",
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    /// Moon nights worth turning up for — the new moon, the full moon, and
+    /// anything bigger. Laid out a year ahead and refreshed whenever the app
+    /// opens, so they survive without a server.
+    static func scheduleMoonNights(enabled: Bool) {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(
+            withIdentifiers: (0..<40).map { "lumen.moon.\($0)" }
+        )
+        guard enabled else { return }
+
+        let nights = MoonAlmanac.upcoming(months: 12).filter { $0.event.isMajor }
+        for (index, night) in nights.prefix(20).enumerated() {
+            let content = UNMutableNotificationContent()
+            content.title = night.title
+            content.body = night.event.practice
+            content.sound = .default
+
+            var components = Calendar.current.dateComponents(
+                [.year, .month, .day], from: night.date
+            )
+            components.hour = 19
+            components.minute = 0
+
+            center.add(
+                UNNotificationRequest(
+                    identifier: "lumen.moon.\(index)",
+                    content: content,
+                    trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+                )
+            )
+        }
+    }
+
     static func cancelAll() {
         let ids = RitualWindow.allCases.map { prefix + $0.rawValue }
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)

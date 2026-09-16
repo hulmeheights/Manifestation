@@ -45,11 +45,14 @@ struct CycleScreen: View {
                 phaseStrip
                     .padding(.top, 26)
 
-                chapters
-                    .padding(.top, 28)
-
                 stageCard
                     .padding(.top, 26)
+
+                almanac
+                    .padding(.top, Space.section)
+
+                chapters
+                    .padding(.top, Space.section)
             }
             .padding(.horizontal, Space.gutter)
             .padding(.bottom, 26)
@@ -122,6 +125,26 @@ struct CycleScreen: View {
         }
     }
 
+    // MARK: Nights worth turning up for
+    //
+    // Not every night is the same. New and full moons are the rhythm;
+    // supermoons, blue moons and eclipses are the ones people build a practice
+    // around, so they're named and each one says what it's for.
+
+    private var almanac: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Eyebrow(text: "Nights worth turning up for")
+
+            if let tonight = MoonAlmanac.tonight() {
+                NightRow(night: tonight, highlighted: true)
+            }
+
+            ForEach(MoonAlmanac.upcoming(months: 8).filter { !$0.isTonight }.prefix(6)) { night in
+                NightRow(night: night, highlighted: night.event.isMajor)
+            }
+        }
+    }
+
     // MARK: What this phase asks
 
     private var stageCard: some View {
@@ -149,6 +172,67 @@ struct CycleScreen: View {
             RoundedRectangle(cornerRadius: Space.radius, style: .continuous)
                 .strokeBorder(skin.hairline, lineWidth: 1)
         )
+    }
+}
+
+private struct NightRow: View {
+    let night: MoonNight
+    let highlighted: Bool
+
+    @Environment(\.skin) private var skin
+    @State private var open = false
+
+    private var when: String {
+        if night.isTonight { return "TONIGHT" }
+        let days = night.nightsAway
+        if days == 1 { return "TOMORROW" }
+        if days < 30 { return "IN \(days) NIGHTS" }
+        return night.date.formatted(.dateTime.day().month(.abbreviated)).uppercased()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                MoonDisc(
+                    fraction: MoonPhase.moment(night.date).progress,
+                    size: 20,
+                    glowing: highlighted
+                )
+
+                Text(night.title)
+                    .font(Ink.body(15, weight: highlighted ? .bold : .semibold))
+                    .foregroundStyle(skin.ink)
+
+                Spacer(minLength: 6)
+
+                Text(when)
+                    .font(Ink.tiny)
+                    .kerning(1.3)
+                    .foregroundStyle(night.isTonight ? skin.evidence : skin.dim)
+            }
+
+            if open {
+                Text(night.event.practice)
+                    .font(Ink.body(13))
+                    .foregroundStyle(skin.dim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .fill(night.isTonight ? skin.card : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .strokeBorder(
+                    night.isTonight ? skin.ink.opacity(0.35) : skin.hairline,
+                    lineWidth: 1
+                )
+        )
+        .contentShape(Rectangle())
+        .onTapGesture { withAnimation(.easeOut(duration: 0.2)) { open.toggle() } }
     }
 }
 
