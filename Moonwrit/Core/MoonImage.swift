@@ -123,7 +123,7 @@ enum MoonImage {
     // Square, because iOS crops the thumbnail to a square in the collapsed
     // banner and shows the whole thing once the banner is pulled down.
 
-    static func card(fraction: Double, line: String, caption: String, side: CGFloat = 1000) -> UIImage {
+    static func card(fraction: Double, line: String, caption: String, side: CGFloat = 700) -> UIImage {
         let ground = UIColor(red: 0.027, green: 0.031, blue: 0.047, alpha: 1)
         let lit    = UIColor(red: 1.0, green: 0.965, blue: 0.878, alpha: 1)
         let dark   = UIColor(red: 0.067, green: 0.075, blue: 0.102, alpha: 1)
@@ -237,9 +237,45 @@ enum MoonImage {
     ]
 
     /// Writes a card somewhere a notification can reach it.
+    ///
+    /// Skips the drawing entirely if a card of that name is already on disk.
+    /// Fourteen days of reminders are re-laid every time the app backgrounds,
+    /// and redrawing fifty-odd large images each time was both slow and
+    /// pointless — the moon on the 9th is the moon on the 9th.
     static func cardFile(fraction: Double, line: String, caption: String, name: String) -> URL? {
+        if let existing = existingFile(named: name) { return existing }
         guard let data = card(fraction: fraction, line: line, caption: caption).pngData() else { return nil }
         return write(data, name: name)
+    }
+
+    private static func existingFile(named name: String) -> URL? {
+        let url = folder.appendingPathComponent("\(name).png")
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
+    /// Throws away cards older than a fortnight, so the cache can't grow
+    /// forever on a phone that's had the app for a year.
+    static func sweepOldCards() {
+        let cutoff = Date().addingTimeInterval(-14 * 86_400)
+        guard let files = try? FileManager.default.contentsOfDirectory(
+            at: folder,
+            includingPropertiesForKeys: [.contentModificationDateKey]
+        ) else { return }
+
+        for file in files {
+            let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?
+                .contentModificationDate
+            if let modified, modified < cutoff {
+                try? FileManager.default.removeItem(at: file)
+            }
+        }
+    }
+
+    private static var folder: URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("moon-attachments", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
     }
 
     /// Writes tonight's moon somewhere a notification can reach it.
@@ -249,10 +285,6 @@ enum MoonImage {
     }
 
     private static func write(_ data: Data, name: String) -> URL? {
-        let folder = FileManager.default.temporaryDirectory
-            .appendingPathComponent("moon-attachments", isDirectory: true)
-        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-
         let url = folder.appendingPathComponent("\(name).png")
         do {
             try data.write(to: url, options: .atomic)

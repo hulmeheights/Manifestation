@@ -26,6 +26,7 @@ struct CycleScreen: View {
         ScrollView {
             VStack(spacing: 0) {
                 head
+                monthStrip.padding(.top, 26)
                 tonight.padding(.top, 26)
                 nextBig.padding(.top, 14)
                 theMap.padding(.top, Space.section)
@@ -75,6 +76,79 @@ struct CycleScreen: View {
     private var chapterNumber: Int {
         let days = Date().timeIntervalSince(store.profile.startedAt) / 86_400
         return max(1, Int(days / MoonPhase.synodicMonth) + 1)
+    }
+
+    // MARK: - The month, drawn
+    //
+    // Every night of this lunation as its own moon, new through full and back
+    // to new. Tonight is ringed. It is the fastest way to see where you are
+    // without reading a single word.
+
+    private var monthStrip: some View {
+        VStack(alignment: .leading, spacing: 12) {
+
+            Eyebrow(text: "This month", trailing: "night \(moon.cycleDay)")
+
+            let rows = strippedRows
+            VStack(spacing: 14) {
+                ForEach(rows.indices, id: \.self) { index in
+                    HStack(spacing: 0) {
+                        ForEach(rows[index], id: \.self) { night in
+                            nightMoon(night)
+                        }
+                    }
+                }
+            }
+
+            HStack(spacing: 14) {
+                legend("New", 0.0)
+                legend("First quarter", 0.25)
+                legend("Full", 0.5)
+                legend("Last quarter", 0.75)
+            }
+            .padding(.top, 2)
+        }
+    }
+
+    /// The nights of this lunation, in rows that fit a phone.
+    private var strippedRows: [[Int]] {
+        let total = moon.cycleDays
+        let all = Array(1...max(1, total))
+        return stride(from: 0, to: all.count, by: 10).map {
+            Array(all[$0 ..< min($0 + 10, all.count)])
+        }
+    }
+
+    private func nightMoon(_ night: Int) -> some View {
+        let fraction = Double(night - 1) / Double(max(1, moon.cycleDays))
+        let isTonight = night == moon.cycleDay
+
+        return VStack(spacing: 5) {
+            MoonDisc(fraction: fraction, size: 20, glowing: false)
+                .overlay(
+                    Circle()
+                        .strokeBorder(isTonight ? skin.evidence : Color.clear, lineWidth: 1.5)
+                        .padding(-3)
+                )
+
+            Text("\(night)")
+                .font(Ink.mono(8, weight: isTonight ? .bold : .regular))
+                .foregroundStyle(isTonight ? skin.evidence : skin.ghost)
+        }
+        .frame(maxWidth: .infinity)
+        .opacity(night < moon.cycleDay ? 0.45 : 1)
+    }
+
+    private func legend(_ label: String, _ fraction: Double) -> some View {
+        HStack(spacing: 5) {
+            MoonDisc(fraction: fraction, size: 11, glowing: false)
+            Text(label.uppercased())
+                .font(Ink.mono(8, weight: .medium))
+                .kerning(0.6)
+                .foregroundStyle(skin.dim)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
     }
 
     // MARK: - Tonight
@@ -488,6 +562,8 @@ struct ProofScreen: View {
                     .padding(.top, 20)
                 }
 
+                sessions
+
                 Button("Something showed up") { composing = true }
                     .buttonStyle(.ink)
                     .padding(.top, 26)
@@ -498,6 +574,58 @@ struct ProofScreen: View {
         .scrollIndicators(.hidden)
         .sheet(isPresented: $composing) { ProofComposer() }
         .sheet(isPresented: $reading) { ChapterReading() }
+    }
+
+    // MARK: - Sessions
+    //
+    // Where a finished visualisation goes. It used to go nowhere you could
+    // find, which made the See screen feel like it threw your work away.
+
+    @ViewBuilder
+    private var sessions: some View {
+        if !store.scripts.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                Eyebrow(text: "Sessions", trailing: "\(store.scripts.count)")
+                    .padding(.top, Space.section)
+
+                Text("Every visualisation you've finished, how long you held it, and whatever you wrote afterwards.")
+                    .font(Ink.small)
+                    .foregroundStyle(skin.dim)
+                    .padding(.top, 8)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                VStack(spacing: 0) {
+                    ForEach(store.scripts.prefix(20)) { entry in
+                        SessionRow(entry: entry)
+                    }
+                }
+                .padding(.top, 12)
+            }
+        }
+    }
+}
+
+private struct SessionRow: View {
+    let entry: ScriptEntry
+    @Environment(\.skin) private var skin
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("\(entry.title) · \(entry.createdAt.relativeDayLabel)".uppercased())
+                .font(Ink.tiny)
+                .kerning(1.4)
+                .foregroundStyle(skin.evidence)
+
+            Text(entry.body.isEmpty ? "Held it, wrote nothing. That still counts." : entry.body)
+                .font(Ink.body(15))
+                .foregroundStyle(entry.body.isEmpty ? skin.dim : skin.ink)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 14)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(skin.hairline).frame(height: 1)
+        }
     }
 }
 

@@ -28,6 +28,7 @@ struct YouScreen: View {
     @State private var liveRefused = false
     @State private var sending = false
     @State private var testMessage = ""
+    @State private var diagnostics = ""
     @State private var exportItem: ShareItem?
     @State private var importing = false
     @State private var backupMessage = ""
@@ -502,18 +503,26 @@ struct YouScreen: View {
                         let result = await Whispers.sendTest(
                             line: store.focusIntention?.affirmation ?? ""
                         )
-                        sending = false
                         switch result {
-                        case .sent:
-                            testMessage = "On its way. Lock the phone now and you'll see it on the lock screen."
-                            Haptics.tick(store.profile.hapticsEnabled)
+                        case .sent(let queued, let withCard):
+                            if queued {
+                                testMessage = withCard
+                                    ? "Queued with iOS — it arrives in five seconds. Lock the phone now to see it on the lock screen."
+                                    : "Queued with iOS — it arrives in five seconds, without the card. The card couldn't be drawn, which is worth telling me about."
+                                Haptics.tick(store.profile.hapticsEnabled)
+                            } else {
+                                testMessage = "iOS took it but didn't queue it, which shouldn't happen. Send me the line below."
+                            }
                         case .needsPermission:
-                            testMessage = "You said no to notifications. Switch them on in iOS Settings → Moonwrit."
+                            testMessage = "You said no to notifications. Settings → Moonwrit → Notifications."
                         case .blockedInSettings:
                             testMessage = "iOS is blocking notifications for Moonwrit. Settings → Moonwrit → Notifications."
+                        case .notDelivering:
+                            testMessage = "Notifications are allowed, but banners, lock screen and notification centre are all switched off for Moonwrit, so there's nowhere to show it. Settings → Moonwrit → Notifications."
                         case .failed(let why):
                             testMessage = "iOS refused: \(why)"
                         }
+                        sending = false
                         await refresh()
                     }
                 }
@@ -528,11 +537,14 @@ struct YouScreen: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Text(queued > 0
-                     ? "\(queued) queued with iOS."
-                     : "Nothing queued yet — turn a switch on above.")
+                // Everything iOS will admit to about our own settings. If a
+                // notification doesn't turn up, the reason is on this line.
+                Text(diagnostics.isEmpty ? "Checking with iOS…" : diagnostics)
                     .font(Ink.tiny)
                     .foregroundStyle(skin.ghost)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 16)
@@ -578,6 +590,7 @@ struct YouScreen: View {
     private func refresh() async {
         notifyStatus = await Whispers.authorisationStatus()
         queued = await Whispers.pendingCount()
+        diagnostics = await Whispers.diagnostics()
         icon = AppIconOption.current
     }
 

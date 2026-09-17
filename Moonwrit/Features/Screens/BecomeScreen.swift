@@ -6,6 +6,9 @@
 //  where you go and make it true, by doing small things a person like that
 //  would do until you stop being able to tell the difference.
 //
+//  Rebuilt so it answers the two questions it was leaving unanswered:
+//  what do I do right now, and what happens next.
+//
 
 import SwiftUI
 
@@ -17,6 +20,11 @@ struct BecomeScreen: View {
     @State private var choosing = false
     @State private var readingIdea = false
     @State private var openTrait: Trait?
+    @State private var swapping: Trait?
+    @State private var writingOwn: Trait?
+    @State private var now = Date()
+
+    private let tick = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
     private var sheet: CharacterSheet { store.character }
 
@@ -29,11 +37,11 @@ struct BecomeScreen: View {
                 if !sheet.isSet {
                     empty
                 } else {
+                    whereYouAre.padding(.top, 20)
+                    acts.padding(.top, Space.section)
                     tonight.padding(.top, Space.section)
-                    acts.padding(.top, 14)
-                    theIdea.padding(.top, Space.section)
+                    theIdea.padding(.top, 14)
                     stages.padding(.top, Space.section)
-                    tally.padding(.top, Space.section)
                     traitsList.padding(.top, Space.section)
                 }
             }
@@ -41,16 +49,28 @@ struct BecomeScreen: View {
             .padding(.bottom, 40)
         }
         .scrollIndicators(.hidden)
+        .onReceive(tick) { now = $0 }
         .sheet(isPresented: $choosing) { CharacterEditor() }
         .sheet(isPresented: $readingIdea) { BecomingIdea() }
         .sheet(item: $openTrait) { trait in TraitDetail(trait: trait) }
+        .sheet(item: $swapping) { trait in ActPicker(trait: trait) }
+        .sheet(item: $writingOwn) { trait in OwnActEditor(trait: trait) }
     }
 
     // MARK: - Head
 
     private var head: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Eyebrow(text: "Become", trailing: sheet.isSet ? sheet.stage.title : nil)
+            HStack(alignment: .firstTextBaseline) {
+                Eyebrow(text: "Become")
+                Spacer(minLength: 8)
+                if sheet.isSet {
+                    Button("Edit") { choosing = true }
+                        .buttonStyle(.plain)
+                        .font(Ink.label)
+                        .foregroundStyle(skin.evidence)
+                }
+            }
 
             Text(sheet.who.isEmpty ? "Who you're\nbecoming." : sheet.who)
                 .font(Ink.hero)
@@ -70,7 +90,7 @@ struct BecomeScreen: View {
                 .foregroundStyle(skin.dim)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Pick who you're becoming, and the app will turn it into things you can actually do today.")
+            Text("Pick who you're becoming and the app turns it into three things you can do today. It'll do that again tomorrow, and the day after, for as long as you keep turning up.")
                 .font(Ink.body(16))
                 .foregroundStyle(skin.dim)
                 .fixedSize(horizontal: false, vertical: true)
@@ -86,12 +106,86 @@ struct BecomeScreen: View {
         .padding(.top, Space.section)
     }
 
-    // MARK: - Tonight
+    // MARK: - Where you are, said plainly
+
+    private var whereYouAre: some View {
+        VStack(alignment: .leading, spacing: 12) {
+
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(sheet.stage.title)
+                    .font(Ink.title(19))
+                    .foregroundStyle(skin.ink)
+                Spacer(minLength: 8)
+                Text("\(sheet.votes.count) \(sheet.votes.count == 1 ? "vote" : "votes")")
+                    .font(Ink.mono(12, weight: .semibold))
+                    .foregroundStyle(skin.dim)
+            }
+
+            Text(sheet.stage.body)
+                .font(Ink.body(15))
+                .foregroundStyle(skin.dim)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let next = sheet.nextStage, let left = sheet.votesToNextStage {
+                Meter(progress: sheet.progressToNextStage)
+
+                Text("\(left) more \(left == 1 ? "act" : "acts") and you're into \(next.title.lowercased()). There's no clock on it — do them at whatever pace you actually do them.")
+                    .font(Ink.small)
+                    .foregroundStyle(skin.ghost)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("There's no stage after this one. Keep going anyway — it's not a game you finish.")
+                    .font(Ink.small)
+                    .foregroundStyle(skin.ghost)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(card)
+    }
+
+    // MARK: - The acts
+
+    private var acts: some View {
+        VStack(alignment: .leading, spacing: 0) {
+
+            Eyebrow(
+                text: "Do these today",
+                trailing: "\(sheet.doneToday()) of \(sheet.todaysActs().count)"
+            )
+
+            Text("One per trait you chose. They're yours until midnight, then a fresh set — next in \(sheet.timeToNextSet(from: now)). Tick one only after you've actually done it.")
+                .font(Ink.small)
+                .foregroundStyle(skin.dim)
+                .padding(.top, 8)
+                .padding(.bottom, 6)
+                .fixedSize(horizontal: false, vertical: true)
+
+            let pairs = sheet.todaysActs()
+            ForEach(pairs.indices, id: \.self) { index in
+                ActRow(
+                    trait: pairs[index].trait,
+                    act: pairs[index].act,
+                    onSwap: { swapping = pairs[index].trait },
+                    onWriteOwn: { writingOwn = pairs[index].trait }
+                )
+            }
+
+            Text("Doesn't fit your day? Swap it for another, or write your own — an act only works if it's something you could genuinely do before bed.")
+                .font(Ink.tiny)
+                .foregroundStyle(skin.ghost)
+                .padding(.top, 12)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: - Tonight's moon
 
     private var tonight: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 12) {
-                MoonDisc(fraction: store.moon.progress, size: 34, glowing: false)
+            HStack(alignment: .center, spacing: 12) {
+                MoonDisc(fraction: store.moon.progress, size: 30, glowing: false)
                 Text(store.moon.phase.title)
                     .font(Ink.body(14, weight: .semibold))
                     .foregroundStyle(skin.ink)
@@ -108,45 +202,27 @@ struct BecomeScreen: View {
         .background(card)
     }
 
-    // MARK: - The acts
-
-    private var acts: some View {
-        VStack(alignment: .leading, spacing: 0) {
-
-            Eyebrow(
-                text: "Today",
-                trailing: "\(sheet.doneToday()) cast"
-            )
-            .padding(.bottom, 4)
-
-            let pairs = sheet.todaysActs()
-            ForEach(pairs.indices, id: \.self) { index in
-                ActRow(trait: pairs[index].trait, act: pairs[index].act)
-            }
-
-            Text("Tick it after you've done it, not before. A vote you didn't earn is the only way to break this.")
-                .font(Ink.tiny)
-                .foregroundStyle(skin.ghost)
-                .padding(.top, 12)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
     // MARK: - Impersonating vs becoming
 
     private var theIdea: some View {
         Button { readingIdea = true } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Impersonating and becoming")
-                    .font(Ink.body(16, weight: .semibold))
-                    .foregroundStyle(skin.ink)
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Impersonating and becoming")
+                        .font(Ink.body(16, weight: .semibold))
+                        .foregroundStyle(skin.ink)
 
-                Text("Why the costume never holds, and what to do instead. Four minutes.")
-                    .font(Ink.small)
+                    Text("Why the costume never holds, and what to do instead. Four minutes.")
+                        .font(Ink.small)
+                        .foregroundStyle(skin.dim)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(skin.dim)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
             .background(card)
         }
@@ -157,58 +233,30 @@ struct BecomeScreen: View {
 
     private var stages: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Eyebrow(text: "Where you are")
-                .padding(.bottom, 10)
+            Eyebrow(text: "The whole road")
 
-            ForEach(BecomingStage.allCases) { stage in
-                StageLine(stage: stage, current: stage == sheet.stage)
-            }
-        }
-    }
-
-    // MARK: - Tally
-
-    private var tally: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Eyebrow(text: "The evidence")
-
-            HStack(spacing: 8) {
-                tile("\(sheet.votes.count)", "votes cast")
-                tile("\(sheet.daysActed)", "days you showed up")
-                tile("\(Int(sheet.showingUpRate * 100))%", "of days since you started")
-            }
-
-            Text("There is no streak here on purpose. A streak makes one bad day mean something, and one bad day doesn't mean anything. What you're building is a pile you can read back.")
+            Text("Five stages, and the only thing that moves you along is acts done. Nothing here expires and nothing is lost by taking a week off.")
                 .font(Ink.small)
                 .foregroundStyle(skin.dim)
+                .padding(.top, 8)
+                .padding(.bottom, 8)
                 .fixedSize(horizontal: false, vertical: true)
-        }
-    }
 
-    private func tile(_ value: String, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(value)
-                .font(Ink.display(24))
-                .foregroundStyle(skin.ink)
-                .monospacedDigit()
-            Text(label.uppercased())
-                .font(Ink.tiny)
-                .kerning(1.1)
-                .foregroundStyle(skin.dim)
-                .fixedSize(horizontal: false, vertical: true)
+            ForEach(BecomingStage.allCases) { stage in
+                StageLine(
+                    stage: stage,
+                    current: stage == sheet.stage,
+                    reached: sheet.votes.count >= CharacterSheet.threshold(stage)
+                )
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(card)
     }
 
     // MARK: - Your traits
 
     private var traitsList: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Eyebrow(text: "What you chose", trailing: "Change")
-                .contentShape(Rectangle())
-                .onTapGesture { choosing = true }
+            Eyebrow(text: "What you chose", trailing: "\(sheet.votes.count) cast in all")
                 .padding(.bottom, 10)
 
             ForEach(sheet.traits) { trait in
@@ -244,6 +292,11 @@ struct BecomeScreen: View {
                 }
                 .buttonStyle(.plain)
             }
+
+            Button("Change who you're becoming") { choosing = true }
+                .buttonStyle(.outline)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 20)
         }
     }
 
@@ -266,53 +319,72 @@ private struct ActRow: View {
 
     let trait: Trait
     let act: Act
+    let onSwap: () -> Void
+    let onWriteOwn: () -> Void
 
     private var done: Bool { store.character.didToday(act.id) }
 
     var body: some View {
-        Button {
-            if done {
-                store.withdrawVote(actID: act.id)
-            } else {
-                store.castVote(act: act, trait: trait)
-                Haptics.seal(store.profile.hapticsEnabled)
-            }
-        } label: {
-            HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
 
-                Image(systemName: done ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20, weight: .light))
-                    .foregroundStyle(done ? skin.evidence : skin.hairline)
-                    .padding(.top, 1)
-
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(trait.title.uppercased())
-                        .font(Ink.tiny)
-                        .kerning(1.4)
-                        .foregroundStyle(skin.dim)
-
-                    Text(act.text)
-                        .font(Ink.body(16))
-                        .foregroundStyle(done ? skin.dim : skin.ink)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text("Costs you: \(act.cost)")
-                        .font(Ink.small)
-                        .foregroundStyle(skin.ghost)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
+            Button {
+                if done {
+                    store.withdrawVote(actID: act.id)
+                } else {
+                    store.castVote(act: act, trait: trait)
+                    Haptics.seal(store.profile.hapticsEnabled)
                 }
+            } label: {
+                HStack(alignment: .top, spacing: 12) {
 
-                Spacer(minLength: 0)
+                    Image(systemName: done ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 20, weight: .light))
+                        .foregroundStyle(done ? skin.evidence : skin.hairline)
+                        .padding(.top, 1)
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(trait.title.uppercased())
+                            .font(Ink.tiny)
+                            .kerning(1.4)
+                            .foregroundStyle(skin.dim)
+
+                        Text(act.text)
+                            .font(Ink.body(16))
+                            .foregroundStyle(done ? skin.dim : skin.ink)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if !act.cost.isEmpty {
+                            Text("Costs you: \(act.cost)")
+                                .font(Ink.small)
+                                .foregroundStyle(skin.ghost)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
             }
-            .padding(.vertical, 16)
-            .contentShape(Rectangle())
-            .overlay(alignment: .bottom) {
-                Rectangle().fill(skin.hairline).frame(height: 1)
+            .buttonStyle(.plain)
+
+            if !done {
+                HStack(spacing: 16) {
+                    Button("Swap this one", action: onSwap)
+                    Button("Write my own", action: onWriteOwn)
+                    Spacer()
+                }
+                .buttonStyle(.plain)
+                .font(Ink.small)
+                .foregroundStyle(skin.evidence)
+                .padding(.leading, 32)
             }
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, 16)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(skin.hairline).frame(height: 1)
+        }
     }
 }
 
@@ -323,12 +395,13 @@ private struct StageLine: View {
     @Environment(\.skin) private var skin
     let stage: BecomingStage
     let current: Bool
+    let reached: Bool
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
 
             Circle()
-                .fill(current ? skin.evidence : skin.hairline)
+                .fill(current ? skin.evidence : (reached ? skin.dim : skin.hairline))
                 .frame(width: 7, height: 7)
                 .padding(.top, 7)
 
@@ -338,7 +411,7 @@ private struct StageLine: View {
                         .font(Ink.body(15, weight: current ? .semibold : .regular))
                         .foregroundStyle(current ? skin.ink : skin.dim)
                     Spacer()
-                    Text(stage.marker.uppercased())
+                    Text(thresholdLabel.uppercased())
                         .font(Ink.tiny)
                         .kerning(1.1)
                         .foregroundStyle(skin.ghost)
@@ -356,5 +429,10 @@ private struct StageLine: View {
         .overlay(alignment: .bottom) {
             Rectangle().fill(skin.hairline).frame(height: 1)
         }
+    }
+
+    private var thresholdLabel: String {
+        let n = CharacterSheet.threshold(stage)
+        return n == 0 ? "Start" : "\(n) acts"
     }
 }

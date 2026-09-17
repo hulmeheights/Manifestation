@@ -284,6 +284,19 @@ struct PictureScreen: View {
                 .foregroundStyle(skin.dim)
                 .padding(.top, 14)
 
+            Text("Saved. Every session you finish is kept under Proof → Sessions, with how long you held it and anything you wrote.")
+                .font(Ink.body(15))
+                .foregroundStyle(skin.dim)
+                .multilineTextAlignment(.center)
+                .padding(.top, 18)
+                .padding(.horizontal, 30)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("\(store.scripts.count) \(store.scripts.count == 1 ? "session" : "sessions") kept so far.")
+                .font(Ink.tiny)
+                .foregroundStyle(skin.ghost)
+                .padding(.top, 10)
+
             Spacer()
 
             Button("Again") { reset() }
@@ -323,20 +336,21 @@ struct PictureScreen: View {
         }
     }
 
+    /// Every finished session is kept, whether or not anything was written
+    /// down. Sitting with it for eleven minutes and writing nothing is still a
+    /// session, and it used to vanish without trace.
     private func finish(saving: Bool) {
-        if saving {
-            let text = note.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !text.isEmpty {
-                store.addScript(
-                    ScriptEntry(
-                        title: "What I saw",
-                        body: text,
-                        writtenFrom: Date(),
-                        intentionID: focus?.id
-                    )
-                )
-            }
-        }
+        let text = saving ? note.trimmingCharacters(in: .whitespacesAndNewlines) : ""
+        let minutes = max(1, Int((elapsed / 60).rounded()))
+
+        store.addScript(
+            ScriptEntry(
+                title: "\(minutes) \(minutes == 1 ? "minute" : "minutes")",
+                body: text,
+                writtenFrom: Date(),
+                intentionID: focus?.id
+            )
+        )
         Haptics.seal(store.profile.hapticsEnabled)
         withAnimation(.easeInOut(duration: 0.35)) { stage = .done }
     }

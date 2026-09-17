@@ -84,6 +84,8 @@ enum Whispers {
 
             guard profile.notificationsEnabled else { return }
 
+            MoonImage.sweepOldCards()
+
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
             let calendar = Calendar.current
             let now = Date()
@@ -112,11 +114,15 @@ enum Whispers {
                     content.userInfo = ["window": window.rawValue]
                     content.threadIdentifier = "moonwrit.daily"
 
+                    // One card per DAY, shared by that day's three windows —
+                    // the moon is the same all day and the window detail is
+                    // already in the subtitle. Fourteen images instead of
+                    // forty-two, and cached, so re-laying costs nothing.
                     if let url = MoonImage.cardFile(
                         fraction: moment.progress,
-                        line: content.title,
-                        caption: "\(window.title) · \(window.reps)× · \(moment.phase.title)",
-                        name: "w-\(day)-\(window.rawValue)"
+                        line: trimmed.isEmpty ? window.notificationBody : trimmed,
+                        caption: moment.phase.title,
+                        name: cardName(for: fireDate, line: trimmed)
                     ), let attachment = try? UNNotificationAttachment(
                         identifier: "card", url: url, options: nil
                     ) {
@@ -195,6 +201,27 @@ enum Whispers {
         }
     }
 
+    /// Same card for every notification on a given day and line. Changing the
+    /// line changes the name, so the cards are redrawn rather than going
+    /// stale — which is the whole reason the line is in the name.
+    private static func cardName(for date: Date, line: String) -> String {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        let day = String(format: "%04d%02d%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+        return "d-\(day)-\(stableHash(line))"
+    }
+
+    /// Swift's own `hashValue` is seeded per launch, so it would give a
+    /// different answer every time the app starts and the cache would never
+    /// hit. FNV-1a is stable across launches, which is all this needs.
+    private static func stableHash(_ text: String) -> String {
+        var hash: UInt64 = 0xcbf29ce484222325
+        for byte in text.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x100000001b3
+        }
+        return String(hash, radix: 36)
+    }
+
     private static func strengthDescription(_ strength: Int) -> String {
         switch strength {
         case 5: return "Strongest night of the cycle"
@@ -209,10 +236,39 @@ enum Whispers {
     /// What happened when you asked for one. The button reports this back
     /// rather than doing nothing and leaving you guessing.
     enum TestResult {
-        case sent
+        case sent(queued: Bool, withCard: Bool)
         case needsPermission
         case blockedInSettings
+        case notDelivering
         case failed(String)
+    }
+
+    /// Everything iOS will tell us about our own notification settings, in one
+    /// line, so a failure can be read off the screen instead of guessed at.
+    static func diagnostics() async -> String {
+        let s = await UNUserNotificationCenter.current().notificationSettings()
+
+        func word(_ setting: UNNotificationSetting) -> String {
+            switch setting {
+            case .enabled:       return "on"
+            case .disabled:      return "off"
+            case .notSupported:  return "n/a"
+            @unknown default:    return "?"
+            }
+        }
+
+        let auth: String
+        switch s.authorizationStatus {
+        case .authorized:    auth = "allowed"
+        case .provisional:   auth = "quiet only"
+        case .denied:        auth = "blocked"
+        case .notDetermined: auth = "not asked"
+        case .ephemeral:     auth = "temporary"
+        @unknown default:    auth = "unknown"
+        }
+
+        let pending = await pendingCount()
+        return "iOS says: \(auth) · banners \(word(s.alertSetting)) · lock screen \(word(s.lockScreenSetting)) · sound \(word(s.soundSetting)) · \(pending) queued"
     }
 
     /// Fires in five seconds so you can see exactly what one looks like —
@@ -220,19 +276,31 @@ enum Whispers {
     /// NotificationRelay tells iOS to show it anyway.
     ///
     /// Asks for permission first if it hasn't been asked, so the button works
-    /// on a fresh install instead of silently failing.
+    /// on a fresh install instead of silently failing. Then it checks the
+    /// request actually landed in iOS's queue, because `add` succeeding is not
+    /// the same thing as iOS agreeing to deliver it.
+    @MainActor
     static func sendTest(line: String) async -> TestResult {
         let center = UNUserNotificationCenter.current()
-        let status = await center.notificationSettings().authorizationStatus
+        var settings = await center.notificationSettings()
 
-        switch status {
+        switch settings.authorizationStatus {
         case .denied:
             return .blockedInSettings
         case .notDetermined:
             let granted = await requestAuthorisation()
             guard granted else { return .needsPermission }
+            settings = await center.notificationSettings()
         default:
             break
+        }
+
+        // Allowed, but every way of showing one is switched off. Sending it
+        // would be pointless and look like a bug.
+        if settings.alertSetting != .enabled
+            && settings.lockScreenSetting != .enabled
+            && settings.notificationCenterSetting != .enabled {
+            return .notDelivering
         }
 
         let moment = MoonPhase.moment()
@@ -249,30 +317,39 @@ enum Whispers {
         content.sound = .default
         content.threadIdentifier = "moonwrit.daily"
 
+        // The card is drawn here on the main actor. A bad attachment makes iOS
+        // drop the whole notification at delivery time, so if it can't be
+        // built we send without it rather than send something iOS will bin.
+        var withCard = false
         if let url = MoonImage.cardFile(
             fraction: moment.progress,
             line: headline,
             caption: caption,
-            name: "test-\(Int(Date().timeIntervalSince1970))"
+            name: "test-\(UUID().uuidString)"
         ), let attachment = try? UNNotificationAttachment(
             identifier: "card", url: url, options: nil
         ) {
             content.attachments = [attachment]
+            withCard = true
         }
 
-        // A fresh identifier every time, so tapping twice gives you two
-        // rather than the second quietly replacing the first.
+        let id = prefix + "test." + UUID().uuidString
         let request = UNNotificationRequest(
-            identifier: prefix + "test." + UUID().uuidString,
+            identifier: id,
             content: content,
             trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
         )
 
         do {
             try await center.add(request)
-            return .sent
         } catch {
             return .failed(error.localizedDescription)
         }
+
+        // Did it actually queue? `add` returning without throwing is not proof.
+        let queued = await center.pendingNotificationRequests()
+            .contains { $0.identifier == id }
+
+        return .sent(queued: queued, withCard: withCard)
     }
 }

@@ -106,6 +106,33 @@ final class ManifestStore {
         scheduleSave()
     }
 
+    /// Swap the act you were offered for another one of that trait's.
+    func chooseAct(_ act: Act, trait: Trait, on day: Date = Date()) {
+        state.character.chosenActs["\(CharacterSheet.dayKey(day))|\(trait.id)"] = act.id
+        scheduleSave()
+    }
+
+    /// Add an act in your own words.
+    func addCustomAct(traitID: String, text: String, cost: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let act = CustomAct(
+            traitID: traitID,
+            text: trimmed,
+            cost: cost.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        state.character.customActs.append(act)
+        // Offer it today, since you only just wrote it.
+        state.character.chosenActs["\(CharacterSheet.dayKey())|\(traitID)"] = act.id
+        scheduleSave()
+    }
+
+    func removeCustomAct(id: String) {
+        state.character.customActs.removeAll { $0.id == id }
+        state.character.chosenActs = state.character.chosenActs.filter { $0.value != id }
+        scheduleSave()
+    }
+
     /// Undo today's vote, for the times you ticked it and then didn't do it.
     func withdrawVote(actID: String) {
         let today = Date()

@@ -159,7 +159,7 @@ enum LunarPlanner {
                 moment.phase.power.strength + night.event.amplifier + (personal ? 1 : 0)
             ))
 
-            var why = night.event.amplified ?? moment.phase.power.headline
+            var why = night.note ?? moment.phase.power.headline
             if personal, let area {
                 why = "Your \(area.title.lowercased()) line is strongest on nights like this. " + why
             }

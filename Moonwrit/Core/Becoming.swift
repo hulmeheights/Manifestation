@@ -271,6 +271,18 @@ enum TraitLibrary {
     }
 }
 
+/// An act you wrote yourself, because the ones the app offers for a trait
+/// don't fit your life. Kept alongside the built-in ones and rotated in the
+/// same way.
+struct CustomAct: Identifiable, Codable, Hashable {
+    var id: String = "own-" + UUID().uuidString
+    var traitID: String
+    var text: String
+    var cost: String
+
+    var asAct: Act { Act(id: id, text: text, cost: cost) }
+}
+
 // MARK: - The sheet
 
 /// One vote, cast on one day.
@@ -292,6 +304,11 @@ struct CharacterSheet: Codable, Hashable {
     /// Up to three. More than three and it's a wish list, not a person.
     var traitIDs: [String] = []
     var votes: [Vote] = []
+    /// Acts you wrote yourself.
+    var customActs: [CustomAct] = []
+    /// "2026-09-17|composed" → the act id you chose for that trait that day,
+    /// when you swapped the one you were offered.
+    var chosenActs: [String: String] = [:]
     var startedAt: Date = Date()
     /// Set once the user has read the short explanation, so it stops leading.
     var readTheIdea: Bool = false
@@ -303,6 +320,8 @@ struct CharacterSheet: Codable, Hashable {
         who          = c.get(.who, "")
         traitIDs     = c.get(.traitIDs, [String]())
         votes        = c.get(.votes, [Vote]())
+        customActs   = c.get(.customActs, [CustomAct]())
+        chosenActs   = c.get(.chosenActs, [String: String]())
         startedAt    = c.get(.startedAt, Date())
         readTheIdea  = c.get(.readTheIdea, false)
     }
@@ -385,9 +404,22 @@ enum BecomingStage: Int, CaseIterable, Identifiable {
 }
 
 extension CharacterSheet {
+
+    /// The vote count each stage begins at. Kept in one place so the screen
+    /// can show you how far off the next one is instead of just naming a
+    /// stage and leaving you to wonder how it decided.
+    static func threshold(_ stage: BecomingStage) -> Int {
+        switch stage {
+        case .deciding:   return 0
+        case .acting:     return 1
+        case .cringing:   return 12
+        case .forgetting: return 40
+        case .being:      return 120
+        }
+    }
+
     var stage: BecomingStage {
-        let count = votes.count
-        switch count {
+        switch votes.count {
         case 0:        return .deciding
         case 1..<12:   return .acting
         case 12..<40:  return .cringing
@@ -395,25 +427,96 @@ extension CharacterSheet {
         default:       return .being
         }
     }
+
+    var nextStage: BecomingStage? {
+        let all = BecomingStage.allCases
+        guard let index = all.firstIndex(of: stage), index + 1 < all.count else { return nil }
+        return all[index + 1]
+    }
+
+    /// How many more votes until the stage changes, and how far through you
+    /// are. Not a deadline — there is no clock on any of this — but it does
+    /// answer "what am I working towards".
+    var votesToNextStage: Int? {
+        guard let nextStage else { return nil }
+        return max(0, Self.threshold(nextStage) - votes.count)
+    }
+
+    var progressToNextStage: Double {
+        guard let nextStage else { return 1 }
+        let from = Double(Self.threshold(stage))
+        let to = Double(Self.threshold(nextStage))
+        guard to > from else { return 1 }
+        return min(1, max(0, (Double(votes.count) - from) / (to - from)))
+    }
 }
 
 // MARK: - What you're doing today
 
 extension CharacterSheet {
 
-    /// One act per chosen trait, rotated by the day so it never becomes
-    /// wallpaper, and stable within the day so ticking it doesn't reshuffle.
+    /// A stable key for a day, used for swaps.
+    static func dayKey(_ day: Date = Date()) -> String {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: day)
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+
+    /// Everything available for a trait: the twelve the app knows, plus
+    /// anything you wrote yourself.
+    func acts(for trait: Trait) -> [Act] {
+        trait.acts + customActs.filter { $0.traitID == trait.id }.map(\.asAct)
+    }
+
+    func act(withID id: String) -> Act? {
+        if let found = TraitLibrary.act(id) { return found }
+        return customActs.first { $0.id == id }?.asAct
+    }
+
+    /// One act per chosen trait. Rotated by the day so it never becomes
+    /// wallpaper, stable within the day so ticking it doesn't reshuffle, and
+    /// overridden by anything you swapped in yourself.
     func todaysActs(on day: Date = Date()) -> [(trait: Trait, act: Act)] {
         let index = Calendar.current.ordinality(of: .day, in: .era, for: day) ?? 0
+        let key = Self.dayKey(day)
+
         return traits.enumerated().compactMap { offset, trait in
-            guard !trait.acts.isEmpty else { return nil }
-            let pick = (index + offset * 3) % trait.acts.count
-            return (trait, trait.acts[pick])
+            let pool = acts(for: trait)
+            guard !pool.isEmpty else { return nil }
+
+            if let chosen = chosenActs["\(key)|\(trait.id)"],
+               let act = act(withID: chosen) {
+                return (trait, act)
+            }
+
+            let pick = (index + offset * 3) % pool.count
+            return (trait, pool[pick])
         }
     }
 
     /// Everything you've done today, whatever day it was offered on.
     func doneToday(on day: Date = Date()) -> Int { votes(on: day).count }
+
+    /// When the next set arrives. The acts turn over at midnight — this is the
+    /// answer to "when does anything happen", which the screen never gave.
+    var nextSetAt: Date {
+        let calendar = Calendar.current
+        return calendar.nextDate(
+            after: Date(),
+            matching: DateComponents(hour: 0, minute: 0),
+            matchingPolicy: .nextTime
+        ) ?? calendar.startOfDay(for: Date().addingTimeInterval(86_400))
+    }
+
+    /// Pass the current time in so a view that ticks once a minute actually
+    /// redraws this — a computed property reading Date() directly would sit
+    /// there frozen.
+    func timeToNextSet(from now: Date = Date()) -> String {
+        let seconds = max(0, Int(nextSetAt.timeIntervalSince(now)))
+        let hours = seconds / 3600
+        let minutes = (seconds % 3600) / 60
+        if hours > 0 { return "\(hours)h \(minutes)m" }
+        return "\(minutes)m"
+    }
 }
 
 // MARK: - The moon and the man

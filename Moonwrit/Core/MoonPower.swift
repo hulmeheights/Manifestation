@@ -190,6 +190,6 @@ extension MoonMoment {
 
     /// The extra line when tonight is more than an ordinary phase.
     var amplifiedTonight: String? {
-        MoonAlmanac.tonight(date)?.event.amplified
+        MoonAlmanac.tonight(date)?.note
     }
 }
