@@ -520,6 +520,8 @@ struct ProofScreen: View {
 
     @State private var composing = false
     @State private var reading = false
+    @State private var editing: EvidenceEntry?
+    @State private var editingSession: ScriptEntry?
 
     var body: some View {
         ScrollView {
@@ -557,10 +559,18 @@ struct ProofScreen: View {
                 } else {
                     VStack(spacing: 0) {
                         ForEach(store.evidence) { entry in
-                            ProofRow(entry: entry)
+                            Button { editing = entry } label: {
+                                ProofRow(entry: entry)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.top, 20)
+
+                    Text("Tap any of them to change the wording or take it out.")
+                        .font(Ink.tiny)
+                        .foregroundStyle(skin.ghost)
+                        .padding(.top, 10)
                 }
 
                 sessions
@@ -574,6 +584,8 @@ struct ProofScreen: View {
         }
         .scrollIndicators(.hidden)
         .sheet(isPresented: $composing) { ProofComposer() }
+        .sheet(item: $editing) { entry in ProofComposer(existing: entry) }
+        .sheet(item: $editingSession) { entry in SessionEditor(entry: entry) }
         .sheet(isPresented: $reading) { ChapterReading() }
     }
 
@@ -597,7 +609,10 @@ struct ProofScreen: View {
 
                 VStack(spacing: 0) {
                     ForEach(store.scripts.prefix(20)) { entry in
-                        SessionRow(entry: entry)
+                        Button { editingSession = entry } label: {
+                            SessionRow(entry: entry)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.top, 12)

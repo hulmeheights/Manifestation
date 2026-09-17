@@ -117,16 +117,69 @@ enum Library {
 
     static let pictureRule = "If you catch yourself saying \u{201C}I would\u{201D} or \u{201C}it will be\u{201D}, stop and start that answer again. It is happening now."
 
-    static let picturePrompts: [String] = [
-        "You are standing in it. Where are you?",
-        "What is the light doing?",
-        "What can you hear right now?",
-        "What are you wearing?",
-        "Who else is here with you?",
-        "What have you just put down?",
-        "What can you smell?",
-        "You say something out loud. What is it?"
+    /// The prompts, grouped by what they're asking you to notice.
+    ///
+    /// A session takes one from each group, so you always get the full sweep
+    /// — place, light, sound, body, people, objects, smell, speech — but
+    /// never the same eight questions twice in a row. Asking "what can you
+    /// hear" four sessions running is how visualisation turns into a form to
+    /// fill in, and the whole point is that it doesn't.
+    static let picturePromptGroups: [[String]] = [
+        [   // Place
+            "You are standing in it. Where are you?",
+            "Look down. What's under your feet?",
+            "You've just walked in. What's the first thing you see?",
+            "Turn around. What's behind you?"
+        ],
+        [   // Light
+            "What is the light doing?",
+            "What time of day is it, and how do you know?",
+            "Where is the light coming from?",
+            "Is it warm or cold where you're standing?"
+        ],
+        [   // Sound
+            "What can you hear right now?",
+            "What's the quietest thing you can hear?",
+            "Is there music, or is it just the room?",
+            "What sound tells you this is real?"
+        ],
+        [   // Body and clothes
+            "What are you wearing?",
+            "How are you standing?",
+            "What's in your hands?",
+            "What does your face do when nobody's watching you?"
+        ],
+        [   // People
+            "Who else is here with you?",
+            "Who is the first person you'd tell?",
+            "Someone looks at you differently now. Who?",
+            "Who isn't here, and are you alright about that?"
+        ],
+        [   // Objects and aftermath
+            "What have you just put down?",
+            "What's on the table?",
+            "What did you get rid of to make room for this?",
+            "What's the one object that proves it happened?"
+        ],
+        [   // Smell and air
+            "What can you smell?",
+            "What's the air like?",
+            "What's cooking, or burning, or brewing?",
+            "Is there a smell here you'd recognise anywhere?"
+        ],
+        [   // Speech and feeling
+            "You say something out loud. What is it?",
+            "Somebody says your name. How do they say it?",
+            "What do you feel in your chest?",
+            "What's the sentence you've been waiting to say?"
+        ]
     ]
+
+    /// Eight questions for one session: one from each group, in a shuffled
+    /// order, different every time you sit down.
+    static func pictureQuestions() -> [String] {
+        picturePromptGroups.compactMap { $0.randomElement() }.shuffled()
+    }
 
     /// Shown once the eight are done.
     static let pictureClose = "Stay in it a moment longer. Then let it go \u{2014} it\u{2019}s handled."

@@ -228,9 +228,15 @@ struct ProofComposer: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.skin) private var skin
 
+    /// Nil when writing a new one, set when correcting one you already filed.
+    var existing: EvidenceEntry? = nil
+
     @State private var text = ""
     @State private var kind: EvidenceKind = .sign
+    @State private var confirmingDelete = false
     @FocusState private var writing: Bool
+
+    private var editing: Bool { existing != nil }
 
     private var canSave: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -241,10 +247,13 @@ struct ProofComposer: View {
             NightGround()
 
             VStack(alignment: .leading, spacing: 0) {
-                Eyebrow(text: "New evidence", trailing: Date().relativeDayLabel)
-                    .padding(.top, 22)
+                Eyebrow(
+                    text: editing ? "Edit" : "New evidence",
+                    trailing: (existing?.date ?? Date()).relativeDayLabel
+                )
+                .padding(.top, 22)
 
-                Text("What just\nhappened?")
+                Text(editing ? "Change what\nit says." : "What just\nhappened?")
                     .font(Ink.hero)
                     .foregroundStyle(skin.ink)
                     .padding(.top, 16)
@@ -277,21 +286,45 @@ struct ProofComposer: View {
 
                 Spacer()
 
-                Button("Add it") { save() }
+                Button(editing ? "Save it" : "Add it") { save() }
                     .buttonStyle(.ink)
                     .disabled(!canSave)
                     .opacity(canSave ? 1 : 0.45)
 
+                if editing {
+                    Button("Delete this one") { confirmingDelete = true }
+                        .buttonStyle(.outline)
+                        .padding(.top, 10)
+                }
+
                 Button("Cancel") { dismiss() }
-                    .buttonStyle(.outline)
-                    .padding(.top, 10)
+                    .buttonStyle(.plain)
+                    .font(Ink.small)
+                    .foregroundStyle(skin.dim)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 16)
                     .padding(.bottom, 26)
             }
             .padding(.horizontal, Space.gutter)
         }
         .skin(store.skin)
+        .alert("Delete this?", isPresented: $confirmingDelete) {
+            Button("Delete", role: .destructive) {
+                if let existing { store.deleteEvidence(existing) }
+                store.syncOutside()
+                dismiss()
+            }
+            Button("Keep it", role: .cancel) {}
+        } message: {
+            Text("It comes out of the pile for good.")
+        }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { writing = true }
+            if let existing {
+                text = existing.text
+                kind = existing.kind
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { writing = true }
+            }
         }
     }
 
@@ -323,15 +356,25 @@ struct ProofComposer: View {
     }
 
     private func save() {
-        store.addEvidence(
-            EvidenceEntry(
-                kind: kind,
-                text: text.trimmingCharacters(in: .whitespacesAndNewlines),
-                intentionID: store.focusIntention?.id
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if var existing {
+            existing.text = trimmed
+            existing.kind = kind
+            store.updateEvidence(existing)
+            Haptics.tick(store.profile.hapticsEnabled)
+        } else {
+            store.addEvidence(
+                EvidenceEntry(
+                    kind: kind,
+                    text: trimmed,
+                    intentionID: store.focusIntention?.id
+                )
             )
-        )
+            Haptics.received(store.profile.hapticsEnabled)
+        }
+
         store.syncOutside()
-        Haptics.received(store.profile.hapticsEnabled)
         dismiss()
     }
 }

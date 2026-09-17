@@ -311,6 +311,12 @@ final class ManifestStore {
         scheduleSave()
     }
 
+    func updateEvidence(_ entry: EvidenceEntry) {
+        guard let index = state.evidence.firstIndex(where: { $0.id == entry.id }) else { return }
+        state.evidence[index] = entry
+        scheduleSave()
+    }
+
     func deleteEvidence(_ entry: EvidenceEntry) {
         state.evidence.removeAll { $0.id == entry.id }
         scheduleSave()

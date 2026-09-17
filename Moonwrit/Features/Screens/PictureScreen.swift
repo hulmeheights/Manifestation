@@ -26,6 +26,9 @@ struct PictureScreen: View {
         case done
     }
 
+    /// Set by the tab shell so "Show me where" can actually take you there.
+    var goToProof: (() -> Void)? = nil
+
     @State private var stage: Stage = .intro
     @State private var startedAt: Date?
     @State private var elapsed: TimeInterval = 0
@@ -33,7 +36,10 @@ struct PictureScreen: View {
     @FocusState private var writingNote: Bool
 
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-    private var prompts: [String] { Library.picturePrompts }
+    /// Drawn once per session and held in state — a computed property would
+    /// reshuffle on every redraw and the question would change under you
+    /// mid-sentence.
+    @State private var prompts: [String] = Library.pictureQuestions()
     private var focus: Intention? { store.focusIntention }
 
     var body: some View {
@@ -255,6 +261,12 @@ struct PictureScreen: View {
                 )
                 .padding(.top, 20)
 
+            Text("It's kept under Proof \u{2192} Sessions, with how long you held it. You can change the wording or take it out later.")
+                .font(Ink.tiny)
+                .foregroundStyle(skin.ghost)
+                .padding(.top, 12)
+                .fixedSize(horizontal: false, vertical: true)
+
             Spacer()
 
             Button("Keep it") { finish(saving: true) }
@@ -285,7 +297,7 @@ struct PictureScreen: View {
                 .foregroundStyle(skin.dim)
                 .padding(.top, 14)
 
-            Text("Saved. Every session you finish is kept under Proof → Sessions, with how long you held it and anything you wrote.")
+            Text("Saved under Proof \u{2192} Sessions, with how long you held it and anything you wrote. Tap it there to change it or take it out.")
                 .font(Ink.body(15))
                 .foregroundStyle(skin.dim)
                 .multilineTextAlignment(.center)
@@ -300,9 +312,14 @@ struct PictureScreen: View {
 
             Spacer()
 
+            Button("Show me where") { goToProof?() }
+                .buttonStyle(.ink)
+                .padding(.horizontal, Space.gutter)
+
             Button("Again") { reset() }
                 .buttonStyle(.outline)
                 .padding(.horizontal, Space.gutter)
+                .padding(.top, 10)
                 .padding(.bottom, 22)
         }
     }
@@ -310,6 +327,7 @@ struct PictureScreen: View {
     // MARK: - Flow
 
     private func begin() {
+        prompts = Library.pictureQuestions()
         startedAt = Date()
         elapsed = 0
         withAnimation(.easeInOut(duration: 0.3)) { stage = .prompt(0) }

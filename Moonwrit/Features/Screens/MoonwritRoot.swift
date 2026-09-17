@@ -54,7 +54,7 @@ struct MoonwritRoot: View {
                 Group {
                     switch tab {
                     case .today:    TodayScreen(launch: $ritual)
-                    case .see:      PictureScreen()
+                    case .see:      PictureScreen(goToProof: { tab = .evidence })
                     case .become:   BecomeScreen()
                     case .cycle:    CycleScreen()
                     case .evidence: ProofScreen()
