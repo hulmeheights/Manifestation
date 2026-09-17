@@ -1,6 +1,6 @@
 //
 //  Moonlight.swift
-//  Lumen
+//  Moonwrit
 //
 //  The design system: two faces of one app. Night is near-black with a real
 //  starfield and a moon that carries the only light in the whole interface.

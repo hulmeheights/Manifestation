@@ -1,6 +1,6 @@
 //
 //  SharedSnapshot.swift
-//  Lumen
+//  Moonwrit
 //
 //  The small slice of state the widgets are allowed to see. Written to the
 //  App Group container whenever the store changes; read by the widget
@@ -17,7 +17,7 @@ enum SharedStore {
 
     /// Change this to match the App Group you create in Xcode, in BOTH targets.
     /// Signing & Capabilities → + Capability → App Groups.
-    static let appGroup = "group.com.hulmeheights.lumen"
+    static let appGroup = "group.com.hulmeheights.moonwrit"
 
     private static let filename = "widget-snapshot.json"
 

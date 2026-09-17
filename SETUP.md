@@ -1,6 +1,6 @@
 # Moonwrit — setup, and what iOS actually allows
 
-Everything in here is built and wired into `Lumen.xcodeproj`. Open it, set
+Everything in here is built and wired into `Moonwrit.xcodeproj`. Open it, set
 your team once (below), press ⌘R.
 
 ---
@@ -10,7 +10,7 @@ your team once (below), press ⌘R.
 Xcode doesn't keep your team in the project file unless it's written there, so
 after replacing the project you set it once:
 
-- Blue **Lumen** project → **Lumen** target → **Signing & Capabilities** → **Team**
+- Blue **Moonwrit** project → **Moonwrit** target → **Signing & Capabilities** → **Team**
 - Then the **MoonwritWidget** target → same Team
 
 **Send me your Team ID and I'll write it into the project so you never do this
@@ -21,7 +21,7 @@ Xcode → Settings → Accounts.
 the widget can read your line. On a free Apple ID the build fails on
 entitlements. Either pay the £79 (you need it for the App Store anyway) or
 delete the two `CODE_SIGN_ENTITLEMENTS = Support/…` lines from
-`Lumen.xcodeproj/project.pbxproj` — the app and the Live Activity keep
+`Moonwrit.xcodeproj/project.pbxproj` — the app and the Live Activity keep
 working, and the widgets show the moon and "Open Moonwrit" instead of your
 line, because without the group they genuinely can't see it.
 
@@ -90,7 +90,7 @@ copy into iCloud Drive now and again. **Restore from a copy** reads one back.
 
 | Folder | Target | Contents |
 |---|---|---|
-| `Lumen/` | app | Everything you see inside the app |
+| `Moonwrit/` | app | Everything you see inside the app |
 | `Shared/` | **both** | `MoonPhase`, `Moonlight`, `SharedSnapshot`, `MoonwritActivity` |
 | `MoonwritWidget/` | widget | `MoonwritWidgets`, `MoonwritLiveActivity` |
 | `Support/` | build | Entitlements and partial Info.plists |

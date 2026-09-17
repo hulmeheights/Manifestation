@@ -1,6 +1,6 @@
 //
 //  MoonPhase.swift
-//  Lumen
+//  Moonwrit
 //
 //  The lunar cycle, computed. No API, no network, no dependency — the moon
 //  is arithmetic on a date, so this works offline and forever.

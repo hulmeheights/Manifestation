@@ -5,7 +5,7 @@
 //  The permanent widgets: home screen and lock screen, both customisable by
 //  long-pressing them and choosing Edit Widget.
 //
-//  This target is wired up in Lumen.xcodeproj already — there is nothing to
+//  This target is wired up in Moonwrit.xcodeproj already — there is nothing to
 //  do in Xcode. Everything in the MoonwritWidget folder belongs to the
 //  extension; everything in Shared/ is compiled into both it and the app.
 //
