@@ -298,7 +298,8 @@ struct CycleScreen: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 4)
 
-            ForEach(LunarPlanner.keyNights(for: focus, months: 6).prefix(14)) { night in
+            let nights = Array(LunarPlanner.keyNights(for: focus, months: 6).prefix(14))
+            ForEach(nights) { night in
                 KeyNightRow(
                     night: night,
                     open: expanded == night.id

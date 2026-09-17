@@ -41,6 +41,31 @@ enum Whispers {
     /// whole set is re-laid every time the app opens.
     private static let daysAhead = 14
 
+    // MARK: - Doing the work only when there is work
+
+    /// Laying fourteen days of reminders means tearing down and re-adding
+    /// nearly sixty requests. That used to happen every single time the app
+    /// went to the background, which is expensive for no reason: the schedule
+    /// only changes when your line, your hours or the switches change, or when
+    /// the day rolls over. This remembers the last shape and skips the work.
+    private static func unchanged(_ fingerprint: String, key: String) -> Bool {
+        let defaults = UserDefaults.standard
+        if defaults.string(forKey: key) == fingerprint { return true }
+        defaults.set(fingerprint, forKey: key)
+        return false
+    }
+
+    /// Forget the fingerprints, so the next call really does re-lay.
+    private static func forgetFingerprints() {
+        UserDefaults.standard.removeObject(forKey: "moonwrit.schedule.daily")
+        UserDefaults.standard.removeObject(forKey: "moonwrit.schedule.moon")
+    }
+
+    private static var today: String {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        return String(format: "%04d%02d%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+
     // MARK: - Permission
 
     static func authorisationStatus() async -> UNAuthorizationStatus {
@@ -62,6 +87,7 @@ enum Whispers {
     }
 
     static func cancelAll() {
+        forgetFingerprints()
         let center = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests { requests in
             let ids = requests
@@ -76,6 +102,17 @@ enum Whispers {
     /// Clears and re-lays the daily reminders. `line` is the user's own focus
     /// affirmation — it is the headline of every notification, never filler.
     static func reschedule(profile: Profile, line: String) {
+        let fingerprint = [
+            today,
+            String(profile.notificationsEnabled),
+            String(profile.morningHour),
+            String(profile.afternoonHour),
+            String(profile.nightHour),
+            line
+        ].joined(separator: "|")
+
+        guard !unchanged(fingerprint, key: "moonwrit.schedule.daily") else { return }
+
         let center = UNUserNotificationCenter.current()
 
         center.getPendingNotificationRequests { requests in
@@ -151,6 +188,9 @@ enum Whispers {
     /// New moons, full moons, supermoons, blue moons and eclipses — each with
     /// what that night is actually for.
     static func scheduleMoonNights(enabled: Bool) {
+        let fingerprint = "\(today)|\(enabled)"
+        guard !unchanged(fingerprint, key: "moonwrit.schedule.moon") else { return }
+
         let center = UNUserNotificationCenter.current()
 
         center.getPendingNotificationRequests { requests in

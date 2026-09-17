@@ -174,7 +174,40 @@ enum MoonAlmanac {
     // MARK: Upcoming
 
     /// Every notable night in the next `months` months, soonest first.
+    // MARK: - Cache
+    //
+    // This walk is not cheap: a dozen lunations, each solving for its own new
+    // and full moon, plus the eclipse table and a sort. It used to be called
+    // several times per frame from the Today header, which locked the app
+    // solid. The answer only changes once a day, so it is computed once a day.
+
+    private static let cacheLock = NSLock()
+    private static var cache: [String: [MoonNight]] = [:]
+
     static func upcoming(from start: Date = Date(), months: Int = 12) -> [MoonNight] {
+        // Quantised to the day so that calls a millisecond apart share an
+        // answer — without this the cache would never hit.
+        let day = Calendar.current.startOfDay(for: start)
+        let key = "\(Int(day.timeIntervalSince1970))|\(months)"
+
+        cacheLock.lock()
+        let hit = cache[key]
+        cacheLock.unlock()
+        if let hit { return hit }
+
+        let result = compute(from: day, months: months)
+
+        cacheLock.lock()
+        // A new key a day, two or three shapes of query. If it ever grows past
+        // that something is wrong, so start again rather than leak.
+        if cache.count > 24 { cache.removeAll() }
+        cache[key] = result
+        cacheLock.unlock()
+
+        return result
+    }
+
+    private static func compute(from start: Date, months: Int) -> [MoonNight] {
         var nights: [MoonNight] = []
         let calendar = Calendar.current
         guard let horizon = calendar.date(byAdding: .month, value: months, to: start) else {
@@ -273,9 +306,9 @@ enum MoonAlmanac {
     /// Anything happening today.
     /// Looks a full year ahead rather than a couple of months, so the
     /// "closest of the year" ranking is the same answer here as it is in the
-    /// list further down the Cycle screen.
+    /// list further down the Cycle screen. Cached, like everything above.
     static func tonight(_ date: Date = Date()) -> MoonNight? {
-        upcoming(from: Calendar.current.startOfDay(for: date).addingTimeInterval(-1), months: 13)
+        upcoming(from: date, months: 13)
             .first { Calendar.current.isDate($0.date, inSameDayAs: date) }
     }
 

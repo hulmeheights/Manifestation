@@ -192,10 +192,13 @@ struct TodayScreen: View {
                     .kerning(1.6)
                     .foregroundStyle(skin.evidence)
 
+                // Worked out once, not once per bar. Reading it inside the
+                // loop meant five almanac walks every time this redrew.
+                let strength = moon.strengthTonight
                 HStack(spacing: 3) {
                     ForEach(1...5, id: \.self) { step in
                         Capsule()
-                            .fill(step <= moon.strengthTonight ? skin.ink : skin.track)
+                            .fill(step <= strength ? skin.ink : skin.track)
                             .frame(width: 10, height: 3)
                     }
                 }
